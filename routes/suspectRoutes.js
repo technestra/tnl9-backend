@@ -1,0 +1,28 @@
+import express from "express";
+import { protect } from "../middlewares/authMiddleware.js";
+import {
+  createSuspect,
+  getAllSuspects,
+  getCompanySuspects,
+  updateSuspect,
+  deleteSuspect,
+  getSuspectById,
+  toggleSuspectActive
+} from "../controllers/suspectController.js";
+
+const router = express.Router();
+
+/* GLOBAL */
+router.get("/suspects", protect, getAllSuspects);
+
+/* COMPANY WISE */
+router.post("/companies/:companyId/suspects", protect, createSuspect);
+router.get("/companies/:companyId/suspects", protect, getCompanySuspects);
+router.get("/suspects/:id", protect, getSuspectById);
+
+/* SINGLE */
+router.put("/suspects/:id", protect, updateSuspect);
+router.delete("/suspects/:id", protect, deleteSuspect);
+router.put("/:id/toggle-active", protect, toggleSuspectActive);
+
+export default router;
