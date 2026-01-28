@@ -1,0 +1,57 @@
+name: Deploy Backend
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts || true
+
+      - name: Rsync Backend to EC2
+        run: |
+          rsync -av --delete \
+            --exclude=".git" \
+            --exclude=".github" \
+            --exclude="node_modules" \
+            ./ \
+            ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:/home/ec2-user/tnl9/tnl9-backend/
+
+      - name: Create .env on EC2 from GitHub Secrets
+        run: |
+          ssh ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << EOF
+            cat > /home/ec2-user/tnl9/tnl9-backend/.env << 'ENV'
+            BREVO_API_KEY=${{ secrets.BREVO_API_KEY }}
+            BREVO_SENDER_EMAIL=${{ secrets.BREVO_SENDER_EMAIL }}
+            BREVO_SENDER_NAME=${{ secrets.BREVO_SENDER_NAME }}
+
+            CLOUDINARY_NAME=${{ secrets.CLOUDINARY_CLOUD_NAME }}
+            CLOUDINARY_KEY=${{ secrets.CLOUDINARY_API_KEY }}
+            CLOUDINARY_SECRET=${{ secrets.CLOUDINARY_API_SECRET }}
+
+            JWT_EXPIRE=${{ secrets.JWT_EXPIRE }}
+            JWT_SECRET=${{ secrets.JWT_SECRET }}
+            MONGO_URI=${{ secrets.MONGO_URI }}
+            PORT=${{ secrets.PORT }}
+            RECAPTCHA_SECRET_KEY=${{ secrets.RECAPTCHA_SECRET_KEY }}
+            ENV
+          EOF
+
+      - name: Install deps & restart
+        run: |
+          ssh ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
+            cd /home/ec2-user/tnl9/tnl9-backend
+            npm ci
+            pm2 list
+            pm2 start server.js --name tnl9-backend || pm2 reload server.js --name tnl9-backend
+          EOF
