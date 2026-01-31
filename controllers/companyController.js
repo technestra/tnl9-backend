@@ -198,3 +198,68 @@ export const deleteCompany = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+
+export const toggleCompanyActive = async (req, res) => {
+  try {
+    const company = await Company.findById(req.params.id);
+    if (!lead) {
+      return res.status(404).json({ message: "Company not found" });
+    }
+
+    if (req.user.role !== "SUPER_ADMIN") {
+      return res.status(403).json({ message: "Only Super Admin allowed" });
+    }
+
+    company.isActive = !company.isActive;
+    await company.save();
+
+    res.json({
+      message: `Company ${company.isActive ? "Activated" : "Deactivated"}`,
+      isActive: company.isActive
+    });
+  } catch (error) {
+    console.error("[TOGGLE ACTIVE ERROR]:", error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+
+export const getCompanyById = async (req, res) => {
+  try {
+    const companyId = req.params.id;
+
+    // Company find karo
+    const company = await Company.findById(companyId);
+
+    if (!company) {
+      return res.status(404).json({ message: "Company not found" });
+    }
+
+    // Permission check
+    const isSuperAdmin = req.user.role === "SUPER_ADMIN";
+    const isCreator = company.createdBy.userId.toString() === req.user.id;
+    const isAssignedAdmin = company.assignedAdmins
+      .map(id => id.toString())
+      .includes(req.user.id);
+    const isAssignedUser = company.assignedUsers
+      .map(id => id.toString())
+      .includes(req.user.id);
+
+    // Agar SUPER_ADMIN nahi hai aur na creator hai na assigned → access denied
+    if (!isSuperAdmin && !isCreator && !isAssignedAdmin && !isAssignedUser) {
+      return res.status(403).json({ message: "You do not have permission to view this company" });
+    }
+
+    // Optional: extra info populate karo (agar frontend mein names/emails dikhane hain)
+    const populatedCompany = await Company.findById(companyId)
+      .populate("createdBy.userId", "name email role")   // createdBy ka user detail
+      .populate("assignedAdmins", "name email")           // assigned admins
+      .populate("assignedUsers", "name email");           // assigned users
+
+    res.status(200).json(populatedCompany);
+  } catch (error) {
+    console.error("Error in getCompanyById:", error);
+    res.status(500).json({ message: error.message || "Server error" });
+  }
+};

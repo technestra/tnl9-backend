@@ -7,7 +7,9 @@ import {
   getEmployeeDocuments,
   unlockDocuments,
   generateCloudinarySignature,
-  saveUploadedUrls
+  saveUploadedUrls,
+  getDocumentStatus,
+  unlockSingleDocument
 } from "../controllers/employeeDocumentController.js";
 
 const router = express.Router();
@@ -37,12 +39,7 @@ router.get(
   generateCloudinarySignature
 );
 
-router.get(
-  "/:userId",
-  protect,
-  allowRoles("SUPER_ADMIN"),
-  getEmployeeDocuments
-);
+router.get("/status", protect, allowRoles("USER"), getDocumentStatus);
 
 router.post(
   "/save-urls",
@@ -51,12 +48,25 @@ router.post(
   saveUploadedUrls
 );
 
+router.get(
+  "/:userId",
+  protect,
+  allowRoles("SUPER_ADMIN"),
+  getEmployeeDocuments
+);
 
 router.put(
   "/unlock/:userId",
   protect,
   allowRoles("SUPER_ADMIN"),
   unlockDocuments
+);
+
+router.put(
+  "/unlock/:userId/:field",
+  protect,
+  allowRoles("SUPER_ADMIN"),
+  unlockSingleDocument
 );
 
 export default router;

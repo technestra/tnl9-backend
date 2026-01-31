@@ -6,7 +6,8 @@ import {
   updateLead,
   deleteLead,
   updateLeadStage,
-  getLeadById
+  getLeadById,
+  toggleLeadActive
 } from "../controllers/leadController.js";
 
 const router = express.Router();
@@ -17,6 +18,7 @@ router.get("/:id", protect, getLeadById);
 router.put("/:id", protect, updateLead);
 router.delete("/:id", protect, deleteLead);
 router.put("/:id/stage", protect, updateLeadStage);
+router.put("/:id/toggle-active", protect, toggleLeadActive)
 
 
 export default router;

@@ -78,6 +78,10 @@ const companySchema = new mongoose.Schema(
     comment: {
       type: String
     },
+    isActive: {
+      type: Boolean,
+      default: true
+    },
 
     /* CREATED BY */
     createdBy: {

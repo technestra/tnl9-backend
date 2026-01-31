@@ -14,7 +14,7 @@ const router = express.Router();
 
 router.get("/profile/me", protect, getMyProfile);
 router.get("/:userId", protect, getEmployeeProfileById);
-router.post("/profile/photo", protect, upload.single("photo") ,uploadPhoto);
+router.post("/profile/photo", protect ,uploadPhoto);
 
 router.post("/profile", protect, createEmployeeProfile);
 router.put("/profile", protect, updateEmployeeProfile);

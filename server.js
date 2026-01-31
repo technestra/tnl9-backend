@@ -21,7 +21,24 @@ connectDB();
 
 
 const app = express();
-app.use(cors());
+// app.use(cors());
+app.use(
+  cors({
+    origin: [
+      "http://localhost:5173",
+      "http://localhost:5174",
+      "http://localhost:5175",
+      "https://tnl9.com"
+    ],
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    allowedHeaders: [
+      "Content-Type",
+      "Authorization"
+    ],
+    credentials: true
+  })
+);
+
 app.use(express.json());
 
 
@@ -29,8 +46,8 @@ app.use("/api/super-admin", superAdminRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/companies", companyRoutes);
 app.use("/api/company-access", companyAssignmentRoutes);
-app.use('/api/users', userRoutes);
 app.use('/api/employee', employeeProfileRoutes);
+app.use('/api/users', userRoutes);
 app.use("/api/suspect", suspectRoutes);
 app.use("/api/prospects", prospectRoutes);
 app.use("/api/leads", leadRoutes);

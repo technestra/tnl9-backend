@@ -31,7 +31,7 @@ const prospectSchema = new mongoose.Schema(
     },
 
     suspectSnapshot: {
-      suspectName: { type: String, required: true },
+      suspectName: { type: String},
       suspectEmail: String,
       suspectContact: String
     },
