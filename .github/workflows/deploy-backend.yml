@@ -54,4 +54,8 @@ jobs:
             npm ci
             pm2 list
             pm2 start server.js --name tnl9-backend -f
+<<<<<<< HEAD
           EOF
+=======
+          EOF
+>>>>>>> cbd6eaf210af82526bd6001cbc91a27a8aaa713a

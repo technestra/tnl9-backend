@@ -38,7 +38,10 @@ app.use(
     credentials: true
   })
 );
+<<<<<<< HEAD
 
+=======
+>>>>>>> cbd6eaf210af82526bd6001cbc91a27a8aaa713a
 app.use(express.json());
 
 
