@@ -118,13 +118,35 @@ export const uploadPhoto = async (req, res) => {
   }
 };
 
+// export const getMyProfile = async (req, res) => {
+//   try {
+//     const profile = await EmployeeProfile.findOne({ user: req.user.id })
+//       .populate("user", "name email role");
+
+//     if (!profile) {
+//       return res.status(404).json({ message: "Profile not found" });
+//     }
+
+//     res.json(profile);
+//   } catch (err) {
+//     res.status(500).json({ message: err.message });
+//   }
+// };
 export const getMyProfile = async (req, res) => {
   try {
-    const profile = await EmployeeProfile.findOne({ user: req.user.id })
+    let profile = await EmployeeProfile.findOne({ user: req.user.id })
       .populate("user", "name email role");
 
+    // 🔥 AUTO CREATE PROFILE IF NOT EXISTS
     if (!profile) {
-      return res.status(404).json({ message: "Profile not found" });
+      profile = await EmployeeProfile.create({
+        user: req.user.id,
+        employeeId: `EMP-${Date.now()}`,
+        employeeCode: `EC-${Math.floor(100000 + Math.random() * 900000)}`
+      });
+
+      profile = await EmployeeProfile.findById(profile._id)
+        .populate("user", "name email role");
     }
 
     res.json(profile);
@@ -132,6 +154,9 @@ export const getMyProfile = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
+
+
+
 
 export const getEmployeeProfileById = async (req, res) => {
   try {
