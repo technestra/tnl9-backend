@@ -203,7 +203,7 @@ export const deleteCompany = async (req, res) => {
 export const toggleCompanyActive = async (req, res) => {
   try {
     const company = await Company.findById(req.params.id);
-    if (!lead) {
+    if (!Company) {
       return res.status(404).json({ message: "Company not found" });
     }
 

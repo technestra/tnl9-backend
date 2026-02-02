@@ -13,11 +13,11 @@ toggleUserStatus
 const router = express.Router();
 
 router.post('/super-admin/create', protect, allowRoles('SUPER_ADMIN'), createUserBySuperAdmin);
-router.get('/all', protect, allowRoles('SUPER_ADMIN'), getAllUsers);
-
 router.post('/admin/create', protect, allowRoles('ADMIN'), createUserByAdmin);
 
 router.get('/me', protect, allowRoles('SUPER_ADMIN', 'ADMIN', 'USER'), getMe);
+router.get('/all', protect, allowRoles('SUPER_ADMIN'), getAllUsers);
+
 router.put('/deactivate/:id', protect, allowRoles('SUPER_ADMIN'), deactivateUser);
 
 router.patch(

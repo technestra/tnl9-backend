@@ -54,7 +54,9 @@ export const createSuspect = async (req, res) => {
 export const getAllSuspects = async (req, res) => {
   try {
     const { company } = req.query;
-    let filter = {};
+    let filter = {
+      status: { $ne: "Converted" }
+    };
 
     if (req.user.role !== "SUPER_ADMIN") {
       filter["createdBy.userId"] = req.user.id;

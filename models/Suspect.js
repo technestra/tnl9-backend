@@ -3,7 +3,7 @@ import mongoose from "mongoose";
 const suspectSchema = new mongoose.Schema(
   {
     suspectId: {
-      type: String, 
+      type: String,
       required: true,
       unique: true
     },
@@ -19,19 +19,19 @@ const suspectSchema = new mongoose.Schema(
         type: String
       },
       contactEmail: {
-        type: String 
+        type: String
       },
-      contactPhone:{
-        type: String 
+      contactPhone: {
+        type: String
       },
-      contactDesignation:{
-        type: String 
+      contactDesignation: {
+        type: String
       },
       contactLinkedin: {
-        type: String 
+        type: String
       }
     },
-    
+
 
 
     /* LOCATIONS */
@@ -49,7 +49,7 @@ const suspectSchema = new mongoose.Schema(
     },
 
     budget: {
-      type: String 
+      type: String
     },
     firstContactedOn: {
       type: Date
@@ -105,6 +105,10 @@ const suspectSchema = new mongoose.Schema(
 
     remarks: {
       type: String
+    },
+    isConverted: {
+      type: Boolean,
+      default: false
     },
     suspectSource: {
       type: String,

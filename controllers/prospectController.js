@@ -128,8 +128,12 @@ export const createProspect = async (req, res) => {
     });
 
     /* ================= 7. MARK SUSPECT CONVERTED ================= */
+    // suspectDoc.status = "Converted";
+    // await suspectDoc.save();
     suspectDoc.status = "Converted";
-    await suspectDoc.save();
+suspectDoc.isConverted = true;
+await suspectDoc.save();
+
 
     res.status(201).json({
       message: "Prospect created successfully",
