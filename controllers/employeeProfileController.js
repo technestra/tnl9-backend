@@ -118,26 +118,11 @@ export const uploadPhoto = async (req, res) => {
   }
 };
 
-// export const getMyProfile = async (req, res) => {
-//   try {
-//     const profile = await EmployeeProfile.findOne({ user: req.user.id })
-//       .populate("user", "name email role");
-
-//     if (!profile) {
-//       return res.status(404).json({ message: "Profile not found" });
-//     }
-
-//     res.json(profile);
-//   } catch (err) {
-//     res.status(500).json({ message: err.message });
-//   }
-// };
 export const getMyProfile = async (req, res) => {
   try {
     let profile = await EmployeeProfile.findOne({ user: req.user.id })
       .populate("user", "name email role");
 
-    // 🔥 AUTO CREATE PROFILE IF NOT EXISTS
     if (!profile) {
       profile = await EmployeeProfile.create({
         user: req.user.id,

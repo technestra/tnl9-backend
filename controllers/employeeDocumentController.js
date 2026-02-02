@@ -3,26 +3,6 @@ import EmployeeProfile from "../models/EmployeeProfile.js";
 import cloudinary from "../utils/cloudinary.js";
 import crypto from "crypto";
 
-// export const generateCloudinarySignature = (req, res) => {
-//   const { folder } = req.query;
-
-//   const timestamp = Math.round(Date.now() / 1000);
-
-//   const signature = cloudinary.utils.api_sign_request(
-//     {
-//       timestamp,
-//       folder
-//     },
-//     process.env.CLOUDINARY_SECRET
-//   );
-
-//   res.json({
-//     cloudName: process.env.CLOUDINARY_NAME,
-//     apiKey: process.env.CLOUDINARY_KEY,
-//     timestamp,
-//     signature
-//   });
-// };
 export const generateCloudinarySignature = (req, res) => {
   const { folder } = req.query;
 
@@ -125,9 +105,6 @@ export const uploadDocuments = async (req, res) => {
 };
 
 
-
-
-/* ================= VIEW DOCUMENTS (SUPER ADMIN ONLY) ================= */
 export const getEmployeeDocuments = async (req, res) => {
   try {
     const docs = await EmployeeDocument.findOne({ user: req.params.userId })
@@ -143,31 +120,6 @@ export const getEmployeeDocuments = async (req, res) => {
   }
 };
 
-// export const unlockDocuments = async (req, res) => {
-//   try {
-//     const docs = await EmployeeDocument.findOne({ user: req.params.userId });
-
-//     if (!docs) {
-//       return res.status(404).json({ message: "Documents not found" });
-//     }
-
-//     // Optional: Agar selective unlock chahiye toh body se field bhejo
-//     // Abhi poora unlock kar rahe hain
-//     Object.keys(docs.documents).forEach(field => {
-//       if (docs.documents[field]) {
-//         docs.documents[field].locked = false;
-//       }
-//     });
-
-//     docs.unlockedBySuperAdmin = true;
-
-//     await docs.save();
-
-//     res.json({ message: "All documents unlocked for re-upload" });
-//   } catch (error) {
-//     res.status(500).json({ message: error.message });
-//   }
-// };
 export const unlockDocuments = async (req, res) => {
   try {
     const docs = await EmployeeDocument.findOne({ user: req.params.userId });
@@ -191,40 +143,6 @@ export const unlockDocuments = async (req, res) => {
   }
 };
 
-
-
-// export const saveUploadedUrls = async (req, res) => {
-//   try {
-//     const userId = req.user.id;
-
-//     const profile = await EmployeeProfile.findOne({ user: userId });
-//     if (!profile) {
-//       return res.status(404).json({ message: "Employee profile not found" });
-//     }
-
-//     const existing = await EmployeeDocument.findOne({ user: userId });
-//     if (existing?.documentsLocked) {
-//       return res.status(403).json({ message: "Documents are locked" });
-//     }
-
-//     await EmployeeDocument.findOneAndUpdate(
-//       { user: userId },
-//       {
-//         user: userId,
-//         employeeProfile: profile._id,
-//         documents: req.body.documents,
-//         documentsLocked: true,
-//         unlockedBySuperAdmin: false
-//       },
-//       { upsert: true, new: true }
-//     );
-
-//     res.json({ message: "Documents saved and locked" });
-//   } catch (err) {
-//     res.status(500).json({ message: err.message });
-//   }
-// };
-// controllers/employeeDocumentController.js
 
 export const saveUploadedUrls = async (req, res) => {
   try {
@@ -250,19 +168,17 @@ export const saveUploadedUrls = async (req, res) => {
       });
     }
 
-    // 🚫 Locked document check
     if (docs.documents?.[field]?.locked === true) {
       return res.status(403).json({
         message: `${field} is locked. Contact Super Admin.`
       });
     }
 
-    // ✅ Update only that document
     docs.documents[field] = {
       url,
       publicId,
       uploadedAt: new Date(),
-      locked: true // 🔒 auto-lock after upload
+      locked: true 
     };
 
     docs.unlockedBySuperAdmin = false;
@@ -279,32 +195,6 @@ export const saveUploadedUrls = async (req, res) => {
 };
 
 
-
-
-// export const getDocumentStatus = async (req, res) => {
-//   try {
-//     const doc = await EmployeeDocument.findOne({ user: req.user.id });
-
-//     if (!doc) {
-//       return res.json({ documents: {} });
-//     }
-
-//     const status = {};
-//     Object.keys(doc.documents).forEach(field => {
-//       status[field] = {
-//         locked: doc.documents[field]?.locked || false,
-//         url: doc.documents[field]?.url || null
-//       };
-//     });
-
-//     res.json({
-//       documents: status,
-//       unlockedBySuperAdmin: doc.unlockedBySuperAdmin || false
-//     });
-//   } catch (error) {
-//     res.status(500).json({ message: "Failed to fetch status" });
-//   }
-// };
 export const getDocumentStatus = async (req, res) => {
   try {
     const doc = await EmployeeDocument.findOne({ user: req.user.id });
@@ -331,34 +221,6 @@ export const getDocumentStatus = async (req, res) => {
   }
 };
 
-
-
-
-
-// export const unlockSingleDocument = async (req, res) => {
-//   try {
-//     const { userId, field } = req.params;
-
-//     const docs = await EmployeeDocument.findOne({ user: userId });
-
-//     if (!docs) {
-//       return res.status(404).json({ message: "Documents not found" });
-//     }
-
-//     if (!docs.documents[field]) {
-//       return res.status(404).json({ message: `Document ${field} not found` });
-//     }
-
-//     docs.documents[field].locked = false;
-//     docs.unlockedBySuperAdmin = true; // global flag for tracking
-
-//     await docs.save();
-
-//     res.json({ message: `${field} unlocked successfully` });
-//   } catch (error) {
-//     res.status(500).json({ message: error.message });
-//   }
-// };
 
 export const unlockSingleDocument = async (req, res) => {
   try {

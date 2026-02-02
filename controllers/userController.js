@@ -139,3 +139,12 @@ export const toggleUserStatus = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
+
+// export const deleteUser = async (req, res) => {
+//   try{
+//     const user = await User.findByIdAndDelete(req.param.id);
+//     if(!User){
+//       return res.status(404).json({ message: "User not found"});
+//     }
+//   }
+// }

@@ -31,8 +31,8 @@ export const getProspects = async (req, res) => {
 export const createProspect = async (req, res) => {
   try {
     const {
-      company,          // optional (direct create)
-      suspect,          // REQUIRED
+      company,          
+      suspect,         
       prospectStatus,
       prospectSource,
       decisionMaker,
@@ -45,7 +45,6 @@ export const createProspect = async (req, res) => {
       followUpOwner
     } = req.body;
 
-    /* ================= 1. SUSPECT REQUIRED ================= */
     if (!suspect) {
       return res.status(400).json({ message: "Suspect is required" });
     }
@@ -55,7 +54,6 @@ export const createProspect = async (req, res) => {
       return res.status(404).json({ message: "Suspect not found" });
     }
 
-    /* ================= 2. COMPANY RESOLVE ================= */
     let companyDoc = null;
 
     if (company) {
@@ -70,7 +68,6 @@ export const createProspect = async (req, res) => {
       });
     }
 
-    /* ================= 3. SUSPECT SNAPSHOT ================= */
     const primaryContact =
       suspectDoc.contacts?.length > 0
         ? suspectDoc.contacts[0].value
@@ -82,7 +79,6 @@ export const createProspect = async (req, res) => {
       suspectContact: primaryContact
     };
 
-    /* ================= 4. COMPANY SNAPSHOT ================= */
     const companySnapshot = suspectDoc.companySnapshot
       ? {
           companyName: suspectDoc.companySnapshot.companyName,

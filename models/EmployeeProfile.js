@@ -21,7 +21,6 @@ const employeeProfileSchema = new mongoose.Schema(
       required: true
     },
 
-    /* ---------------- PERSONAL DETAILS ---------------- */
     dob: Date,
     gender: String,
     maritalStatus: String,
