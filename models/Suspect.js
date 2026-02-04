@@ -9,52 +9,32 @@ const suspectSchema = new mongoose.Schema(
     },
     company: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Company",
+      ref: "Company", 
       required: true
     },
-
-    /* BASIC INFO */
-    contactSnapshot: {
-      contactName: {
-        type: String
-      },
-      contactEmail: {
-        type: String
-      },
-      contactPhone: {
-        type: String
-      },
-      contactDesignation: {
-        type: String
-      },
-      contactLinkedin: {
-        type: String
+    contactSnapshots: [  
+      {
+        name: { type: String, required: true },
+        email: String,
+        phone: { type: String, required: true },
+        designation: String,
+        linkedin: String,
+        contactLocation: String 
       }
-    },
-
-
-
-    /* LOCATIONS */
-
-    currentLocation: {
-      type: String
-    },
-
-    previousCompany: {
-      type: String
-    },
-
+    ],
+    contactPersonIds: [  
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "ContactPerson"
+      } 
+    ],
     currentCompany: {
       type: String
     },
-
     budget: {
       type: String
     },
     firstContactedOn: {
-      type: Date
-    },
-    lastContactedOn: {
       type: Date
     },
     lastFollowedUpOn: {
@@ -67,7 +47,6 @@ const suspectSchema = new mongoose.Schema(
       type: String,
       enum: ["High", "Medium", "Low"]
     },
-
     companySnapshot: {
       companyName: {
         type: String,
@@ -86,23 +65,6 @@ const suspectSchema = new mongoose.Schema(
         type: String
       }
     },
-
-
-    /* MULTIPLE CONTACTS */
-    contacts: [
-      {
-        type: {
-          type: String,
-          enum: ["phone", "whatsapp", "email"],
-          required: true
-        },
-        value: {
-          type: String,
-          required: true
-        }
-      }
-    ],
-
     remarks: {
       type: String
     },
@@ -115,14 +77,11 @@ const suspectSchema = new mongoose.Schema(
       enum: ["LinkedIn", "UpWork", "Event", "Referral", "Cold Email", "Tender", "Other"],
       required: true
     },
-
     status: {
       type: String,
       enum: ["SUSPECT", "New", "Contacted", "Converted", "Junk"],
       default: "SUSPECT"
     },
-
-    /* CREATED BY */
     createdBy: {
       userId: {
         type: mongoose.Schema.Types.ObjectId,

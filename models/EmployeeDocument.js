@@ -41,7 +41,6 @@ const employeeDocumentSchema = new mongoose.Schema(
       COMPLIANCE_DECLARATION: documentItemSchema
     },
 
-    // only for tracking/admin UI (not logic)
     unlockedBySuperAdmin: {
       type: Boolean,
       default: false

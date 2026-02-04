@@ -9,19 +9,19 @@ const leadSchema = new mongoose.Schema(
 
     prospect: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Prospect"
+      ref: "Prospect",
+      required: false 
     },
-
     company: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Company"
+      ref: "Company",
+      required: true
     },
-
     suspect: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Suspect"
+      ref: "Suspect",
+      required: false
     },
-
     companySnapshot: {
       companyName: String,
       companyAddress: String,
@@ -31,15 +31,23 @@ const leadSchema = new mongoose.Schema(
       companyEmail: String
     },
 
-    contactSnapshot: {
-      contactName: String,
-      contactEmail: String,
-      contactPhone: String,
-      decisionMaker: {
-        type: Boolean,
-        default: false
+    contactSnapshots: [
+      {
+        name: { type: String, required: true },
+        email: String,
+        phone: { type: String, required: true },
+        designation: String,
+        linkedin: String,
+        contactLocation: String
       }
-    },
+    ],
+
+    contactPersonIds: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "ContactPerson"
+      }
+    ],
 
     prospectStatus: {
       type: String,
@@ -78,7 +86,7 @@ const leadSchema = new mongoose.Schema(
     followUpOwner: String,
 
     leadName: {
-      type: String,
+      type: String, 
       required: true
     },
 
@@ -89,9 +97,9 @@ const leadSchema = new mongoose.Schema(
     },
 
     platform: {
-  type: String,
-  enum: ["LinkedIn", "Direct", "Referral", "Website", "UpWork", "Event", "Old Client", "Tender", "Other"],
-},
+      type: String,
+      enum: ["LinkedIn", "Direct", "Referral", "Website", "UpWork", "Event", "Old Client", "Tender", "Other"]
+    },
 
     pipelineType: {
       type: String,
@@ -101,14 +109,7 @@ const leadSchema = new mongoose.Schema(
 
     stage: {
       type: String,
-      enum: [
-        "New",
-        "Qualified",
-        "Proposal",
-        "Negotiation",
-        "Won",
-        "Lost"
-      ],
+      enum: ["New", "Qualified", "Proposal", "Negotiation", "Won", "Lost"],
       default: "New"
     },
 
@@ -163,7 +164,8 @@ const leadSchema = new mongoose.Schema(
 
     location: {
       type: String,
-      enum: ["Remote", "Onsite", "Hybrid"]
+      enum: ["Remote", "Onsite", "Hybrid"],
+      default: "Remote"
     },
 
     interviewRounds: Number,

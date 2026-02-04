@@ -140,9 +140,6 @@ export const getMyProfile = async (req, res) => {
   }
 };
 
-
-
-
 export const getEmployeeProfileById = async (req, res) => {
   try {
     const profile = await EmployeeProfile.findOne({ user: req.params.userId })

@@ -8,11 +8,8 @@ const existing = await SuperAdmin.findOne();
 if (existing) {
 return res.status(403).json({ message: "Super Admin already exists" });
 }
-
 const { name, email, password } = req.body;
-
 const hashedPassword = await bcrypt.hash(password, 10);
-
 const superAdmin = await SuperAdmin.create({
 name,
 email,

@@ -1,9 +1,6 @@
 import ContactPerson from "../models/ContactPerson.js";
 import Company from "../models/Company.js";
 
-/* =========================
-   CREATE CONTACT PERSON
-========================= */
 export const createContact = async (req, res) => {
   try {
     const company = await Company.findById(req.body.company);
@@ -20,7 +17,7 @@ export const createContact = async (req, res) => {
         companyContact: company.coordinatorContactNumber
       },
       createdBy: {
-        userId: req.user.id,   // ✅ JWT ID
+        userId: req.user.id,  
         role: req.user.role
       }
     });
@@ -31,33 +28,31 @@ export const createContact = async (req, res) => {
   }
 };
 
-
-
-/* =========================
-   GET ALL CONTACT PERSONS
-   ROLE BASED VISIBILITY
-========================= */
 export const getContacts = async (req, res) => {
   try {
+    const { company } = req.query;
     let filter = {};
 
+    if (company) {
+      filter.company = company;
+    }
+
     if (req.user.role !== "SUPER_ADMIN") {
-      filter.createdBy = { userId: req.user.id };
+      filter["createdBy.userId"] = req.user.id;
       filter.isActive = true;
     }
 
-    const contacts = await ContactPerson.find(filter).sort({ createdAt: -1 });
-    res.json(contacts);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
+    const contacts = await ContactPerson
+      .find(filter)
+      .sort({ createdAt: -1 });
+
+    res.status(200).json(contacts);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
 };
 
 
-
-/* =========================
-   GET SINGLE CONTACT
-========================= */
 export const getSingleContactPerson = async (req, res) => {
   try {
     const contact = await ContactPerson.findById(req.params.id)
@@ -77,9 +72,6 @@ export const getSingleContactPerson = async (req, res) => {
   }
 };
 
-/* =========================
-   UPDATE CONTACT PERSON
-========================= */
 export const updateContact = async (req, res) => {
   const contact = await ContactPerson.findById(req.params.id);
   if (!contact) {
@@ -100,11 +92,6 @@ export const updateContact = async (req, res) => {
 };
 
 
-
-
-/* =========================
-   DELETE CONTACT PERSON
-========================= */
 export const deleteContact = async (req, res) => {
   const contact = await ContactPerson.findById(req.params.id);
   if (!contact) {
@@ -122,12 +109,6 @@ export const deleteContact = async (req, res) => {
   res.json({ message: "Contact deleted" });
 };
 
-
-
-/* =========================
-   TOGGLE ACTIVE / INACTIVE
-   SUPER ADMIN ONLY
-========================= */
 export const toggleContactActive = async (req, res) => {
   if (req.user.role !== "SUPER_ADMIN") {
     return res.status(403).json({ message: "Only Super Admin allowed" });

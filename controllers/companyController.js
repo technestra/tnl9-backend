@@ -6,64 +6,46 @@ export const createCompany = async (req, res) => {
     const {
       companyName,
       ownerName,
-      companyEmail,
-      companyWebsite,
-      companyLinkedin,
-      coordinatorName,
-      coordinatorContactNumber,
-      companyCapability,
-      companySize,
-      companySource,
-      companyAddress,
-      hasBench,
-      resourceFromMarket,
-      availableForDiscussionAt,
-      comment
+      companyEmail, 
+      companyWebsite = "",
+      companyLinkedin = "",
+      // coordinatorContactNumber,
+      companyCapability = [],           // default empty array
+      companySize = "Not specified",
+      companySource = "Other",
+      companyAddress = "Not provided",
+      companyCountry= "",
+      hasBench = false,
+      resourceFromMarket = false,
+      comment = ""
     } = req.body;
 
-
-    if (
-      !companyName ||
-      !ownerName ||
-      !companyEmail ||
-      !coordinatorName ||
-      !coordinatorContactNumber ||
-      !companyCapability ||
-      !companySize ||
-      !companySource ||
-      !companyAddress ||
-      hasBench === undefined ||
-      resourceFromMarket === undefined ||
-      !availableForDiscussionAt
-    ) {
-
+    if (!companyName || !ownerName || !companyEmail ) {
       return res.status(400).json({
-        message: "Required company fields missing"
+        message: "Missing required fields: companyName, ownerName, companyEmail"
       });
     }
-
+    const currentUser = await User.findById(req.user.id);
     const company = await Company.create({
       companyName,
       ownerName,
       companyEmail,
       companyWebsite,
       companyLinkedin,
-      coordinatorName,
-      coordinatorContactNumber,
       companyCapability,
       companySize,
       companySource,
       companyAddress,
+      companyCountry,
       hasBench,
       resourceFromMarket,
-      availableForDiscussionAt,
       comment,
       createdBy: {
         userId: req.user.id,
         role: req.user.role
-      }
+      },
+      isActive: true  
     });
-
 
     if (req.user.role === "ADMIN") {
       company.assignedAdmins.addToSet(req.user.id);
@@ -86,6 +68,7 @@ export const createCompany = async (req, res) => {
       company
     });
   } catch (error) {
+    console.error(error);
     res.status(500).json({ message: error.message });
   }
 };
@@ -145,12 +128,11 @@ export const updateCompany = async (req, res) => {
       "companyEmail",
       "companyWebsite",
       "companyLinkedin",
-      "coordinatorName",
-      "coordinatorContactNumber",
       "companyCapability",
       "companySize",
       "companySource",
       "companyAddress",
+      "companyCountry",
       "hasBench",
       "resourceFromMarket",
       "availableForDiscussionAt",
@@ -225,18 +207,49 @@ export const toggleCompanyActive = async (req, res) => {
 };
 
 
+// export const getCompanyById = async (req, res) => {
+//   try {
+//     const companyId = req.params.id;
+//     const company = await Company.findById(companyId);
+
+//     if (!company) {
+//       return res.status(404).json({ message: "Company not found" });
+//     }
+
+//     const isSuperAdmin = req.user.role === "SUPER_ADMIN";
+//     const isCreator = company.createdBy.userId.toString() === req.user.id;
+//     const isAssignedAdmin = company.assignedAdmins
+//       .map(id => id.toString())
+//       .includes(req.user.id);
+//     const isAssignedUser = company.assignedUsers
+//       .map(id => id.toString())
+//       .includes(req.user.id);
+
+//     if (!isSuperAdmin && !isCreator && !isAssignedAdmin && !isAssignedUser) {
+//       return res.status(403).json({ message: "You do not have permission to view this company" });
+//     }
+
+//     const populatedCompany = await Company.findById(companyId)
+//       .populate("createdBy.userId", "name email role")   
+//       .populate("assignedAdmins", "name email")          
+//       .populate("assignedUsers", "name email");           
+
+//     res.status(200).json(populatedCompany);
+//   } catch (error) {
+//     console.error("Error in getCompanyById:", error);
+//     res.status(500).json({ message: error.message || "Server error" });
+//   }
+// };
 export const getCompanyById = async (req, res) => {
   try {
     const companyId = req.params.id;
-
-    // Company find karo
     const company = await Company.findById(companyId);
 
     if (!company) {
       return res.status(404).json({ message: "Company not found" });
     }
 
-    // Permission check
+    // Permission check (तुम्हारा पुराना logic)
     const isSuperAdmin = req.user.role === "SUPER_ADMIN";
     const isCreator = company.createdBy.userId.toString() === req.user.id;
     const isAssignedAdmin = company.assignedAdmins
@@ -246,16 +259,25 @@ export const getCompanyById = async (req, res) => {
       .map(id => id.toString())
       .includes(req.user.id);
 
-    // Agar SUPER_ADMIN nahi hai aur na creator hai na assigned → access denied
     if (!isSuperAdmin && !isCreator && !isAssignedAdmin && !isAssignedUser) {
       return res.status(403).json({ message: "You do not have permission to view this company" });
     }
 
-    // Optional: extra info populate karo (agar frontend mein names/emails dikhane hain)
+    // IMPORTANT: Populate createdBy.userId + assigned users
     const populatedCompany = await Company.findById(companyId)
-      .populate("createdBy.userId", "name email role")   // createdBy ka user detail
-      .populate("assignedAdmins", "name email")           // assigned admins
-      .populate("assignedUsers", "name email");           // assigned users
+      .populate({
+        path: "createdBy.userId",
+        select: "name email role"  // सिर्फ name, email, role चाहिए
+      })
+      .populate("assignedAdmins", "name email")   // अगर name/email चाहिए
+      .populate("assignedUsers", "name email");
+
+    // Fallback अगर user delete हो गया हो या populate fail हो
+    if (!populatedCompany.createdBy.userId) {
+      populatedCompany.createdBy = {
+        userId: { name: "Unknown", email: "N/A", role: company.createdBy.role }
+      };
+    }
 
     res.status(200).json(populatedCompany);
   } catch (error) {

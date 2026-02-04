@@ -2,6 +2,115 @@ import Prospect from "../models/Prospect.js";
 import Company from "../models/Company.js";
 import Suspect from "../models/Suspect.js";
 
+export const createProspect = async (req, res) => {
+  try {
+    const {
+      company,
+      suspect, 
+      prospectStatus,
+      prospectSource,
+      decisionMaker,
+      requirement,
+      budget,
+      timeline,
+      comments,
+      contactedDate,
+      lastFollowUp,
+      nextFollowUp,
+      followUpOwner,
+      contactSnapshots = [], 
+      contactPersonIds = []  
+    } = req.body;
+
+    let companyDoc = null;
+    let suspectDoc = null;
+    let autoContactSnapshots = [];
+    let autoContactPersonIds = [];
+    let autoSuspectSnapshot = null;
+
+    if (suspect) {
+      suspectDoc = await Suspect.findById(suspect).populate("company");
+      if (!suspectDoc) {
+        return res.status(404).json({ message: "Suspect not found" });
+      }
+
+      companyDoc = suspectDoc.company;
+
+      autoContactSnapshots = suspectDoc.contactSnapshots || [];
+      autoContactPersonIds = suspectDoc.contactPersonIds || [];
+      autoSuspectSnapshot = {
+        suspectName: suspectDoc.contactSnapshot?.contactName || "Unknown",
+        suspectEmail: suspectDoc.contactSnapshot?.contactEmail || "",
+        suspectContact: suspectDoc.contactSnapshot?.contactPhone || ""
+      };
+    } else {
+      if (!company) {
+        return res.status(400).json({ message: "Company is required for direct creation" });
+      }
+      companyDoc = await Company.findById(company);
+      if (!companyDoc) {
+        return res.status(404).json({ message: "Company not found" });
+      }
+    }
+
+    if (!companyDoc) {
+      return res.status(400).json({ message: "Company not found" });
+    }
+
+    const year = new Date().getFullYear();
+    const random = Math.random().toString(36).slice(2, 8).toUpperCase();
+    const prospectId = `P-${year}-${random}`;
+
+    const prospectData = {
+      prospectId,
+      company: companyDoc._id,
+      suspect: suspectDoc?._id || null,
+
+      companySnapshot: {
+        companyName: companyDoc.companyName,
+        companyLinkedIn: companyDoc.companyLinkedin,
+        companyWebsite: companyDoc.companyWebsite,
+        companyLocation: companyDoc.companyAddress,
+        companyEmail: companyDoc.companyEmail,
+        companyContact: companyDoc.coordinatorContactNumber
+      },
+      suspectSnapshot: autoSuspectSnapshot || null,
+      contactSnapshots: suspectDoc ? autoContactSnapshots : contactSnapshots,
+      contactPersonIds: suspectDoc ? autoContactPersonIds : contactPersonIds,
+      prospectStatus: prospectStatus || "Interested",
+      prospectSource: prospectSource || (suspectDoc ? suspectDoc.suspectSource : "Direct"),
+      decisionMaker: decisionMaker || false,
+      requirement: requirement || (suspectDoc ? suspectDoc.remarks : ""),
+      budget: budget || (suspectDoc ? suspectDoc.budget : ""),
+      timeline: timeline || "",
+      comments: comments || (suspectDoc ? [{ text: suspectDoc.remarks || "" }] : []),
+      contactedDate,
+      lastFollowUp,
+      nextFollowUp,
+      followUpOwner,
+      status: "OPEN",
+      isActive: true,
+      createdBy: req.user.id
+    };
+
+    const prospect = await Prospect.create(prospectData);
+
+    if (suspectDoc) {
+      suspectDoc.status = "Converted";
+      suspectDoc.isConverted = true;
+      await suspectDoc.save();
+    }
+
+    res.status(201).json({
+      message: "Prospect created successfully",
+      prospect
+    });
+  } catch (err) {
+    console.error("Create Prospect Error:", err);
+    res.status(500).json({ message: err.message });
+  }
+};
+
 
 
 export const getProspects = async (req, res) => {
@@ -28,126 +137,6 @@ export const getProspects = async (req, res) => {
   }
 };
 
-export const createProspect = async (req, res) => {
-  try {
-    const {
-      company,          
-      suspect,         
-      prospectStatus,
-      prospectSource,
-      decisionMaker,
-      requirement,
-      budget,
-      timeline,
-      comments,
-      lastFollowUp,
-      nextFollowUp,
-      followUpOwner
-    } = req.body;
-
-    if (!suspect) {
-      return res.status(400).json({ message: "Suspect is required" });
-    }
-
-    const suspectDoc = await Suspect.findById(suspect).populate("company");
-    if (!suspectDoc) {
-      return res.status(404).json({ message: "Suspect not found" });
-    }
-
-    let companyDoc = null;
-
-    if (company) {
-      companyDoc = await Company.findById(company);
-    } else if (suspectDoc.company) {
-      companyDoc = suspectDoc.company;
-    }
-
-    if (!companyDoc) {
-      return res.status(400).json({
-        message: "Company not found (not provided & not linked with suspect)"
-      });
-    }
-
-    const primaryContact =
-      suspectDoc.contacts?.length > 0
-        ? suspectDoc.contacts[0].value
-        : suspectDoc.contactSnapshot?.contactPhone || "";
-
-    const suspectSnapshot = {
-      suspectName: suspectDoc.contactSnapshot?.contactName || "Unknown",
-      suspectEmail: suspectDoc.contactSnapshot?.contactEmail || "",
-      suspectContact: primaryContact
-    };
-
-    const companySnapshot = suspectDoc.companySnapshot
-      ? {
-          companyName: suspectDoc.companySnapshot.companyName,
-          companyEmail: suspectDoc.companySnapshot.companyEmail,
-          companyWebsite: suspectDoc.companySnapshot.companyWebsite,
-          companyLinkedIn: suspectDoc.companySnapshot.companyLinkedin,
-          companyLocation: suspectDoc.companySnapshot.companyAddress
-        }
-      : {
-          companyName: companyDoc.companyName,
-          companyEmail: companyDoc.companyEmail,
-          companyWebsite: companyDoc.companyWebsite,
-          companyLinkedIn: companyDoc.companyLinkedin,
-          companyLocation: companyDoc.companyLocation
-        };
-
-    /* ================= 5. PROSPECT ID ================= */
-    const year = new Date().getFullYear();
-    const random = Math.random().toString(36).slice(2, 8).toUpperCase();
-    const prospectId = `P-${year}-${random}`;
-
-    /* ================= 6. CREATE PROSPECT ================= */
-    const prospect = await Prospect.create({
-      prospectId,
-
-      company: companyDoc._id,
-      suspect: suspectDoc._id,
-
-      companySnapshot,
-      suspectSnapshot,
-
-      prospectStatus: prospectStatus || "Interested",
-      prospectSource: prospectSource || "Direct",
-      decisionMaker: decisionMaker || false,
-
-      requirement,   // optional
-      budget,
-      timeline,
-      comments,
-      lastFollowUp,
-      nextFollowUp,
-      followUpOwner,
-
-      status: "OPEN",
-      isActive: true,
-      createdBy: req.user.id
-    });
-
-    /* ================= 7. MARK SUSPECT CONVERTED ================= */
-    // suspectDoc.status = "Converted";
-    // await suspectDoc.save();
-    suspectDoc.status = "Converted";
-suspectDoc.isConverted = true;
-await suspectDoc.save();
-
-
-    res.status(201).json({
-      message: "Prospect created successfully",
-      prospect
-    });
-  } catch (err) {
-    console.error("Create Prospect Error:", err);
-    res.status(500).json({ message: err.message });
-  }
-};
-
-
-
-
 export const getProspectById = async (req, res) => {
   try {
     const prospect = await Prospect.findById(req.params.id);
@@ -162,7 +151,7 @@ export const getProspectById = async (req, res) => {
     ) {
       return res.status(403).json({ message: "Access denied" });
     }
-
+ 
     res.json(prospect);
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -198,9 +187,9 @@ export const updateProspect = async (req, res) => {
       "budget",
       "timeline",
       "comments",
+      "contactedDate",
       "lastFollowUp",
       "nextFollowUp",
-      "followUpOwner"
     ];
 
     allowedFields.forEach(field => {

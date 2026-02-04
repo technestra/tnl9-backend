@@ -10,7 +10,7 @@ const companySchema = new mongoose.Schema(
     },
 
     ownerName: {
-      type: String,
+      type: String, 
       required: true
     },
 
@@ -28,20 +28,8 @@ const companySchema = new mongoose.Schema(
       type: String
     },
 
-    /* CONTACT PERSON */
-    coordinatorName: {
-      type: String,
-      // required: true
-    },
-
-    coordinatorContactNumber: {
-      type: String,
-      required: true
-    },
-
-    /* BUSINESS DETAILS */
     companyCapability: {
-      type: [String], // skillset wise
+      type: [String], 
       required: true
     },
     companySize: {
@@ -69,10 +57,8 @@ const companySchema = new mongoose.Schema(
       type: Boolean,
       required: true
     },
-
-    availableForDiscussionAt: {
-      type: Date,
-      required: true
+    companyCountry: {
+      type: String
     },
 
     comment: {

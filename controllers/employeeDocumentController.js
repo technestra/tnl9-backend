@@ -104,19 +104,23 @@ export const uploadDocuments = async (req, res) => {
   }
 };
 
-
 export const getEmployeeDocuments = async (req, res) => {
   try {
     const docs = await EmployeeDocument.findOne({ user: req.params.userId })
       .populate("user", "name email");
 
     if (!docs) {
-      return res.status(404).json({ message: "No documents found" });
+      return res.status(200).json({
+        user: { name: "User", email: "" },
+        unlockedBySuperAdmin: false,
+        message: "No documents uploaded yet"   
+      });
     }
 
     res.json(docs);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error("Get Employee Documents Error:", error);
+    res.status(500).json({ message: "Server error while fetching documents" });
   }
 };
 
@@ -142,7 +146,6 @@ export const unlockDocuments = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
-
 
 export const saveUploadedUrls = async (req, res) => {
   try {
@@ -242,4 +245,3 @@ export const unlockSingleDocument = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
-

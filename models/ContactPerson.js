@@ -1,16 +1,13 @@
-
 import mongoose from "mongoose";
 
 const contactPersonSchema = new mongoose.Schema(
   {
-    /* COMPANY LINK */
     company: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Company",
       required: true
     },
 
-    /* COMPANY SNAPSHOT (AUTO-FILL) */
     companySnapshot: {
       companyName: String,
       ownerName: String,
@@ -18,18 +15,20 @@ const contactPersonSchema = new mongoose.Schema(
       companyContact: String
     },
 
-    /* CONTACT INFO */
     name: {
       type: String,
       required: true
     },
     email: String,
+    professionalEmail: String,
     phone: {
       type: String,
       required: true
     },
     designation: String,
     linkedin: String,
+    contactLocation: String,
+    addComment: String,
 
     /* STATUS */
     isActive: {
@@ -37,10 +36,10 @@ const contactPersonSchema = new mongoose.Schema(
       default: true
     },
 
-    /* CREATED BY */
     createdBy: {
       userId: {
-        type: String, // because JWT gives string id
+        type: mongoose.Schema.Types.ObjectId, 
+        ref: "User",
         required: true
       },
       role: {

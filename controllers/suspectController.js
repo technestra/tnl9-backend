@@ -2,7 +2,7 @@ import Suspect from "../models/Suspect.js";
 import Company from "../models/Company.js";
 
 export const createSuspect = async (req, res) => {
-  try {
+  try { 
     const { companyId } = req.params;
 
     const company = await Company.findById(companyId);
@@ -26,7 +26,7 @@ export const createSuspect = async (req, res) => {
 
     const suspect = await Suspect.create({
       suspectId,
-      ...req.body,
+      ...req.body,  
       company: companyId,
       companySnapshot: {
         companyName: company.companyName,
@@ -50,7 +50,6 @@ export const createSuspect = async (req, res) => {
   }
 };
 
-
 export const getAllSuspects = async (req, res) => {
   try {
     const { company } = req.query;
@@ -61,25 +60,17 @@ export const getAllSuspects = async (req, res) => {
     if (req.user.role !== "SUPER_ADMIN") {
       filter["createdBy.userId"] = req.user.id;
     }
-
     if (company) {
       filter.company = company;
     }
-
     const suspects = await Suspect.find(filter)
       .populate("company", "companyName")
       .sort({ createdAt: -1 });
-
     res.json(suspects);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
-
-
-
-
-
 
 export const getCompanySuspects = async (req, res) => {
   try {
@@ -126,18 +117,15 @@ export const updateSuspect = async (req, res) => {
     }
 
     const allowedFields = [
-      "contactSnapshot",
-      "currentLocation",
-      "previousCompany",
+      "contactSnapshots",        
+      "contactPersonIds",      
       "currentCompany",
       "budget",
       "firstContactedOn",
-      "lastContactedOn",
       "lastFollowedUpOn",
       "nextFollowUpOn",
       "interestLevel",
       "companySnapshot",
-      "contacts",
       "remarks",
       "suspectSource",
       "status",
@@ -160,10 +148,6 @@ export const updateSuspect = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
-
-
-
-
 
 export const deleteSuspect = async (req, res) => {
   try {
@@ -189,8 +173,6 @@ export const deleteSuspect = async (req, res) => {
   }
 };
 
-
-
 export const toggleSuspectActive = async (req, res) => {
   try {
     console.log("REQ.USER IN CONTROLLER:", req.user);
@@ -215,7 +197,6 @@ export const toggleSuspectActive = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
-
 
 export const getSuspectById = async (req, res) => {
   try {

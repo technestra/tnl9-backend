@@ -17,9 +17,8 @@ const prospectSchema = new mongoose.Schema(
     suspect: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Suspect",
-      required: true
+      required: false 
     },
-
 
     companySnapshot: {
       companyName: { type: String, required: true },
@@ -31,11 +30,28 @@ const prospectSchema = new mongoose.Schema(
     },
 
     suspectSnapshot: {
-      suspectName: { type: String},
+      suspectName: String,
       suspectEmail: String,
       suspectContact: String
     },
 
+    contactSnapshots: [
+      {
+        name: { type: String, required: true },
+        email: String,
+        phone: { type: String, required: true },
+        designation: String,
+        linkedin: String,
+        contactLocation: String
+      }
+    ],
+
+    contactPersonIds: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "ContactPerson"
+      }
+    ],
 
     prospectStatus: {
       type: String,
@@ -45,15 +61,7 @@ const prospectSchema = new mongoose.Schema(
 
     prospectSource: {
       type: String,
-      enum: [
-        "LinkedIn",
-        "UpWork",
-        "Event",
-        "Old Client",
-        "Direct",
-        "Tender",
-        "Other"
-      ],
+      enum: ["LinkedIn", "UpWork", "Event", "Old Client", "Direct", "Tender", "Other"],
       default: "Direct"
     },
 
@@ -62,23 +70,19 @@ const prospectSchema = new mongoose.Schema(
       default: false
     },
 
-    requirement: {
-      type: String,
-      // required: true
-    },
-
+    requirement: String,
     budget: String,
     timeline: String,
 
-    comments: [
+    comments:
       {
         text: String,
-        createdAt: {
-          type: Date,
-          default: Date.now
-        }
-      }
-    ],
+      },
+    createdAt: {
+      type: Date,
+      default: Date.now
+    },
+    contactedDate: Date,
 
     lastFollowUp: Date,
     nextFollowUp: Date,
@@ -92,9 +96,19 @@ const prospectSchema = new mongoose.Schema(
     },
 
     createdBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: true
+      userId: {
+              type: mongoose.Schema.Types.ObjectId,
+              ref: "User",
+              required: true
+            },
+            role: {
+              type: String,
+              enum: ["SUPER_ADMIN", "ADMIN", "USER"],
+              required: true
+            }
+      // type: mongoose.Schema.Types.ObjectId,
+      // ref: "User",
+      // required: true
     },
 
     isActive: {
