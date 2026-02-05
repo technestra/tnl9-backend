@@ -2,12 +2,12 @@ import express from "express";
 import { protect } from "../middlewares/authMiddleware.js";
 import { allowRoles } from "../middlewares/roleMiddleware.js";
 import {
-createUserBySuperAdmin,
-createUserByAdmin,
-getMe,
-deactivateUser,
-getAllUsers,
-toggleUserStatus
+  createUserBySuperAdmin,
+  createUserByAdmin,
+  getMe,
+  deactivateUser,
+  getAllUsers,
+  toggleUserStatus
 } from "../controllers/userController.js";
 
 const router = express.Router();

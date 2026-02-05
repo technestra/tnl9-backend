@@ -18,10 +18,10 @@ export const loginUser = async (req, res) => {
     }
 
     if (!user.isActive) {
-  return res.status(403).json({
-    message: "Your account is deactivated. Contact Super Admin."
-  });
-}
+      return res.status(403).json({
+        message: "Your account is deactivated. Contact Super Admin."
+      });
+    }
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.status(401).json({ message: "Invalid credentials" });
@@ -34,7 +34,9 @@ export const loginUser = async (req, res) => {
         _id: user._id,
         name: user.name,
         email: user.email,
-        role
+        role: user.role, // Fixed role
+        moduleRoles: user.moduleRoles || [], // Module-specific roles
+        accessibleModules: user.accessibleModules || [] // Which modules user can access
       }
     });
 

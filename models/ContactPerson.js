@@ -36,18 +36,23 @@ const contactPersonSchema = new mongoose.Schema(
       default: true
     },
 
+    // ContactPerson.js - createdBy schema update
     createdBy: {
       userId: {
-        type: mongoose.Schema.Types.ObjectId, 
+        type: mongoose.Schema.Types.ObjectId,
         ref: "User",
-        required: true
+      },
+      userName: {
+        type: String,
+      },
+      userEmail: {  // NEW FIELD ADD KAREIN
+        type: String,
       },
       role: {
         type: String,
         enum: ["SUPER_ADMIN", "ADMIN", "USER"],
-        required: true
-      }
-    }
+      },
+    },
   },
   { timestamps: true }
 );

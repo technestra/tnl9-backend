@@ -10,7 +10,7 @@ const leadSchema = new mongoose.Schema(
     prospect: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Prospect",
-      required: false 
+      required: false
     },
     company: {
       type: mongoose.Schema.Types.ObjectId,
@@ -86,7 +86,7 @@ const leadSchema = new mongoose.Schema(
     followUpOwner: String,
 
     leadName: {
-      type: String, 
+      type: String,
       required: true
     },
 
@@ -182,10 +182,21 @@ const leadSchema = new mongoose.Schema(
     },
 
     createdBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: true
-    }
+      userId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+      },
+      userName: {
+        type: String,
+      },
+      userEmail: {   // Add this field
+        type: String,
+      },
+      role: {
+        type: String,
+        enum: ["SUPER_ADMIN", "ADMIN", "USER"],
+      },
+    },
   },
   { timestamps: true }
 );

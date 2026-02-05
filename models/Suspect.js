@@ -9,24 +9,24 @@ const suspectSchema = new mongoose.Schema(
     },
     company: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Company", 
+      ref: "Company",
       required: true
     },
-    contactSnapshots: [  
+    contactSnapshots: [
       {
         name: { type: String, required: true },
         email: String,
         phone: { type: String, required: true },
         designation: String,
         linkedin: String,
-        contactLocation: String 
+        contactLocation: String
       }
     ],
-    contactPersonIds: [  
+    contactPersonIds: [
       {
         type: mongoose.Schema.Types.ObjectId,
         ref: "ContactPerson"
-      } 
+      }
     ],
     currentCompany: {
       type: String
@@ -82,17 +82,25 @@ const suspectSchema = new mongoose.Schema(
       enum: ["SUSPECT", "New", "Contacted", "Converted", "Junk"],
       default: "SUSPECT"
     },
+    // Suspect.js - createdBy schema update
     createdBy: {
       userId: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "User",
-        required: true
+        // required: true,
+      },
+      userName: {
+        type: String,
+        // required: true
+      },
+      userEmail: {
+        type: String,  // NEW FIELD ADD KAREIN
+        // required: true
       },
       role: {
         type: String,
         enum: ["SUPER_ADMIN", "ADMIN", "USER"],
-        required: true
-      }
+        // required: true,
+      },
     },
     createdAt: {
       type: Date,

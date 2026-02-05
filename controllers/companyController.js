@@ -6,7 +6,7 @@ export const createCompany = async (req, res) => {
     const {
       companyName,
       ownerName,
-      companyEmail, 
+      companyEmail,
       companyWebsite = "",
       companyLinkedin = "",
       // coordinatorContactNumber,
@@ -14,18 +14,18 @@ export const createCompany = async (req, res) => {
       companySize = "Not specified",
       companySource = "Other",
       companyAddress = "Not provided",
-      companyCountry= "",
+      companyCountry = "",
       hasBench = false,
       resourceFromMarket = false,
       comment = ""
     } = req.body;
 
-    if (!companyName || !ownerName || !companyEmail ) {
+    if (!companyName || !ownerName || !companyEmail) {
       return res.status(400).json({
         message: "Missing required fields: companyName, ownerName, companyEmail"
       });
     }
-    const currentUser = await User.findById(req.user.id);
+
     const company = await Company.create({
       companyName,
       ownerName,
@@ -44,7 +44,7 @@ export const createCompany = async (req, res) => {
         userId: req.user.id,
         role: req.user.role
       },
-      isActive: true  
+      isActive: true
     });
 
     if (req.user.role === "ADMIN") {
@@ -207,39 +207,6 @@ export const toggleCompanyActive = async (req, res) => {
 };
 
 
-// export const getCompanyById = async (req, res) => {
-//   try {
-//     const companyId = req.params.id;
-//     const company = await Company.findById(companyId);
-
-//     if (!company) {
-//       return res.status(404).json({ message: "Company not found" });
-//     }
-
-//     const isSuperAdmin = req.user.role === "SUPER_ADMIN";
-//     const isCreator = company.createdBy.userId.toString() === req.user.id;
-//     const isAssignedAdmin = company.assignedAdmins
-//       .map(id => id.toString())
-//       .includes(req.user.id);
-//     const isAssignedUser = company.assignedUsers
-//       .map(id => id.toString())
-//       .includes(req.user.id);
-
-//     if (!isSuperAdmin && !isCreator && !isAssignedAdmin && !isAssignedUser) {
-//       return res.status(403).json({ message: "You do not have permission to view this company" });
-//     }
-
-//     const populatedCompany = await Company.findById(companyId)
-//       .populate("createdBy.userId", "name email role")   
-//       .populate("assignedAdmins", "name email")          
-//       .populate("assignedUsers", "name email");           
-
-//     res.status(200).json(populatedCompany);
-//   } catch (error) {
-//     console.error("Error in getCompanyById:", error);
-//     res.status(500).json({ message: error.message || "Server error" });
-//   }
-// };
 export const getCompanyById = async (req, res) => {
   try {
     const companyId = req.params.id;
@@ -249,7 +216,6 @@ export const getCompanyById = async (req, res) => {
       return res.status(404).json({ message: "Company not found" });
     }
 
-    // Permission check (तुम्हारा पुराना logic)
     const isSuperAdmin = req.user.role === "SUPER_ADMIN";
     const isCreator = company.createdBy.userId.toString() === req.user.id;
     const isAssignedAdmin = company.assignedAdmins
@@ -263,25 +229,124 @@ export const getCompanyById = async (req, res) => {
       return res.status(403).json({ message: "You do not have permission to view this company" });
     }
 
-    // IMPORTANT: Populate createdBy.userId + assigned users
     const populatedCompany = await Company.findById(companyId)
-      .populate({
-        path: "createdBy.userId",
-        select: "name email role"  // सिर्फ name, email, role चाहिए
-      })
-      .populate("assignedAdmins", "name email")   // अगर name/email चाहिए
+      .populate("createdBy.userId", "name email role")
+      .populate("assignedAdmins", "name email")
       .populate("assignedUsers", "name email");
-
-    // Fallback अगर user delete हो गया हो या populate fail हो
-    if (!populatedCompany.createdBy.userId) {
-      populatedCompany.createdBy = {
-        userId: { name: "Unknown", email: "N/A", role: company.createdBy.role }
-      };
-    }
 
     res.status(200).json(populatedCompany);
   } catch (error) {
     console.error("Error in getCompanyById:", error);
     res.status(500).json({ message: error.message || "Server error" });
+  }
+};
+
+
+
+
+
+
+// companyController.js me yeh function add karein
+export const searchCompanies = async (req, res) => {
+  try {
+    const {
+      search,
+      createdByUserId,
+      isActive,
+      page = 1,
+      limit = 10
+    } = req.query;
+
+    let query = {};
+
+    // Role-based access
+    if (req.user.role === "SUPER_ADMIN") {
+      // Super Admin ko sab companies dikhengi
+    } else if (req.user.role === "ADMIN") {
+      query.$or = [
+        { "createdBy.userId": req.user.id },
+        { assignedAdmins: req.user.id }
+      ];
+    } else {
+      query.$or = [
+        { "createdBy.userId": req.user.id },
+        { assignedUsers: req.user.id }
+      ];
+    }
+
+    // Search filter
+    if (search) {
+      query.$or = [
+        { companyName: { $regex: search, $options: 'i' } },
+        { ownerName: { $regex: search, $options: 'i' } },
+        { companyEmail: { $regex: search, $options: 'i' } },
+        { companyAddress: { $regex: search, $options: 'i' } }
+      ];
+    }
+
+    // Filter by createdBy user
+    if (createdByUserId) {
+      query["createdBy.userId"] = createdByUserId;
+    }
+
+    // Filter by active status
+    if (isActive !== undefined) {
+      query.isActive = isActive === 'true';
+    }
+
+    const skip = (page - 1) * limit;
+
+    const companies = await Company.find(query)
+      .populate({
+        path: "createdBy.userId",
+        select: "name email role"
+      })
+      .populate("assignedAdmins", "name email")
+      .populate("assignedUsers", "name email")
+      .skip(skip)
+      .limit(parseInt(limit))
+      .sort({ createdAt: -1 });
+
+    const total = await Company.countDocuments(query);
+
+    res.json({
+      success: true,
+      data: companies,
+      pagination: {
+        total,
+        page: parseInt(page),
+        pages: Math.ceil(total / limit),
+        limit: parseInt(limit)
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+// companyController.js me yeh function add karein (users list ke liye)
+export const getCompanyUsers = async (req, res) => {
+  try {
+    // Sirf SUPER_ADMIN hi sab users dekh sakta hai
+    if (req.user.role !== "SUPER_ADMIN") {
+      return res.status(403).json({ message: "Access denied" });
+    }
+
+    const users = await User.find({ isActive: true })
+      .select("_id name email role")
+      .sort({ name: 1 });
+
+    res.json({
+      success: true,
+      data: users
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
   }
 };

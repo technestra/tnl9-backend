@@ -91,15 +91,15 @@ export const uploadDocuments = async (req, res) => {
 
     await docRecord.save();
 
-    res.json({ 
-      message: "Uploaded documents locked", 
-      documents: docRecord.documents 
+    res.json({
+      message: "Uploaded documents locked",
+      documents: docRecord.documents
     });
   } catch (error) {
     console.error("UploadDocuments Error:", error.stack);
-    res.status(500).json({ 
-      message: "Upload failed on server", 
-      error: error.message 
+    res.status(500).json({
+      message: "Upload failed on server",
+      error: error.message
     });
   }
 };
@@ -113,7 +113,7 @@ export const getEmployeeDocuments = async (req, res) => {
       return res.status(200).json({
         user: { name: "User", email: "" },
         unlockedBySuperAdmin: false,
-        message: "No documents uploaded yet"   
+        message: "No documents uploaded yet"
       });
     }
 
@@ -181,7 +181,7 @@ export const saveUploadedUrls = async (req, res) => {
       url,
       publicId,
       uploadedAt: new Date(),
-      locked: true 
+      locked: true
     };
 
     docs.unlockedBySuperAdmin = false;

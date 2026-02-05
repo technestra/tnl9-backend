@@ -2,12 +2,14 @@ import Lead from "../models/Lead.js";
 import Prospect from "../models/Prospect.js";
 import Company from "../models/Company.js";
 import Suspect from "../models/Suspect.js";
+import User from "../models/User.js";
+import SuperAdmin from "../models/SuperAdmin.js";
 
 export const createLead = async (req, res) => {
   try {
     const {
-      prospectId,       
-      company,              
+      prospectId,
+      company,
       engagementType,
       pipelineType,
       platform,
@@ -42,12 +44,30 @@ export const createLead = async (req, res) => {
       proposalVersion,
       negotiationNotes,
       clientFeedback,
-      contactSnapshots = [],     
-      contactPersonIds = []   
+      contactSnapshots = [],
+      contactPersonIds = []
     } = req.body;
 
+    // Fetch user details
+    let userDetails = null;
+    if (req.user.role === "SUPER_ADMIN") {
+      userDetails = await SuperAdmin.findById(req.user.id).select("name email");
+    } else {
+      userDetails = await User.findById(req.user.id).select("name email");
+    }
+
+    if (!userDetails) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
     let payload = {
-      createdBy: req.user.id,
+
+      createdBy: {
+        userId: req.user.id,
+        userName: userDetails.name,
+        userEmail: userDetails.email,
+        role: req.user.role
+      },
       engagementType: engagementType || "IT_SERVICES",
       pipelineType: pipelineType || "IT Services",
       stage: stage || "New",
@@ -134,7 +154,7 @@ export const createLead = async (req, res) => {
       };
     }
     payload = {
-      ...payload,   
+      ...payload,
 
       platform,
       projectCategory,
@@ -192,6 +212,9 @@ export const createLead = async (req, res) => {
     });
   }
 };
+
+
+
 
 export const getLeads = async (req, res) => {
   try {
@@ -335,5 +358,96 @@ export const toggleLeadActive = async (req, res) => {
   } catch (error) {
     console.error("[TOGGLE ACTIVE ERROR]:", error);
     res.status(500).json({ message: error.message });
+  }
+};
+
+
+
+// leadsController.js me yeh function add karein
+export const searchLeads = async (req, res) => {
+  try {
+    const {
+      search,
+      company,
+      createdByUserId,
+      isActive,
+      stage,
+      engagementType,
+      pipelineType,
+      page = 1,
+      limit = 10
+    } = req.query;
+
+    let query = {};
+
+    // Permission check
+    if (req.user.role !== "SUPER_ADMIN") {
+      query["createdBy.userId"] = req.user.id;
+    }
+
+    // Search filter
+    if (search) {
+      query.$or = [
+        { leadId: { $regex: search, $options: 'i' } },
+        { leadName: { $regex: search, $options: 'i' } },
+        { "companySnapshot.companyName": { $regex: search, $options: 'i' } },
+        { "contactSnapshots.name": { $regex: search, $options: 'i' } },
+        { "contactSnapshots.email": { $regex: search, $options: 'i' } },
+        { "contactSnapshots.phone": { $regex: search, $options: 'i' } },
+        { requirement: { $regex: search, $options: 'i' } },
+        { domain: { $regex: search, $options: 'i' } },
+        { jobTitle: { $regex: search, $options: 'i' } }
+      ];
+    }
+
+    if (company) {
+      query.company = company;
+    }
+
+    if (createdByUserId) {
+      query["createdBy.userId"] = createdByUserId;
+    }
+
+    if (isActive !== undefined) {
+      query.isActive = isActive === 'true';
+    }
+
+    if (stage) {
+      query.stage = stage;
+    }
+
+    if (engagementType) {
+      query.engagementType = engagementType;
+    }
+
+    if (pipelineType) {
+      query.pipelineType = pipelineType;
+    }
+
+    const skip = (page - 1) * limit;
+
+    const leads = await Lead.find(query)
+      .populate("company", "companyName")
+      .skip(skip)
+      .limit(parseInt(limit))
+      .sort({ createdAt: -1 });
+
+    const total = await Lead.countDocuments(query);
+
+    res.json({
+      success: true,
+      data: leads,
+      pagination: {
+        total,
+        page: parseInt(page),
+        pages: Math.ceil(total / limit),
+        limit: parseInt(limit)
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
   }
 };

@@ -6,7 +6,8 @@ import {
   getProspectById,
   updateProspect,
   deleteProspect,
-  toggleProspectActive
+  toggleProspectActive,
+  searchProspects
 } from "../controllers/prospectController.js";
 
 const router = express.Router();
@@ -16,6 +17,9 @@ router.get("/", protect, getProspects);
 router.get("/:id", protect, getProspectById);
 router.put("/:id", protect, updateProspect);
 router.delete("/:id", protect, deleteProspect);
+
+// prospectRoutes.js me
+router.get("/search", protect, searchProspects);
 router.put("/:id/toggle-active", protect, toggleProspectActive)
 
 export default router;

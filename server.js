@@ -15,7 +15,8 @@ import dashboardRoutes from "./routes/dashboardRoutes.js";
 import employeeDocumentRoutes from "./routes/employeeDocumentRoutes.js";
 import reportRoutes from "./routes/reportRoutes.js";
 import contactPersonRoutes from "./routes/contactPersonRoutes.js";
-import importRoutes from "./routes/importRoutes.js"
+import importRoutes from "./routes/importRoutes.js";
+import moduleRoleRoutes from "./routes/moduleRoleRoutes.js";
 
 dotenv.config();
 connectDB();
@@ -57,6 +58,7 @@ app.use("/api/employee-documents", employeeDocumentRoutes);
 app.use("/api/reports", reportRoutes);
 app.use("/api/contacts", contactPersonRoutes);
 app.use("/api/import", importRoutes);
+app.use("/api/module-roles", moduleRoleRoutes);
 
 app.get("/", (req, res) => {
 res.send("API Running");

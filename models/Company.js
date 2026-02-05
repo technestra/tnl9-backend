@@ -2,7 +2,7 @@ import mongoose from "mongoose";
 
 const companySchema = new mongoose.Schema(
   {
-    /* BASIC INFO */ 
+    /* BASIC INFO */
     companyName: {
       type: String,
       required: true,
@@ -10,7 +10,7 @@ const companySchema = new mongoose.Schema(
     },
 
     ownerName: {
-      type: String, 
+      type: String,
       required: true
     },
 
@@ -29,7 +29,7 @@ const companySchema = new mongoose.Schema(
     },
 
     companyCapability: {
-      type: [String], 
+      type: [String],
       required: true
     },
     companySize: {
@@ -74,13 +74,17 @@ const companySchema = new mongoose.Schema(
       userId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "User",
-        required: true
+        // required: true,
+      },
+      userName: {
+        type: String,
+        // required: true
       },
       role: {
         type: String,
         enum: ["SUPER_ADMIN", "ADMIN", "USER"],
-        required: true
-      }
+        // required: true,
+      },
     },
 
     /* ASSIGNMENTS */

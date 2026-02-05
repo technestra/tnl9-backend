@@ -17,7 +17,7 @@ const prospectSchema = new mongoose.Schema(
     suspect: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Suspect",
-      required: false 
+      required: false
     },
 
     companySnapshot: {
@@ -75,9 +75,9 @@ const prospectSchema = new mongoose.Schema(
     timeline: String,
 
     comments:
-      {
-        text: String,
-      },
+    {
+      text: String,
+    },
     createdAt: {
       type: Date,
       default: Date.now
@@ -95,20 +95,25 @@ const prospectSchema = new mongoose.Schema(
       default: "OPEN"
     },
 
+    // Prospect.js - createdBy schema update
     createdBy: {
       userId: {
-              type: mongoose.Schema.Types.ObjectId,
-              ref: "User",
-              required: true
-            },
-            role: {
-              type: String,
-              enum: ["SUPER_ADMIN", "ADMIN", "USER"],
-              required: true
-            }
-      // type: mongoose.Schema.Types.ObjectId,
-      // ref: "User",
-      // required: true
+        type: mongoose.Schema.Types.ObjectId,
+        // required: true,
+      },
+      userName: {
+        type: String,
+        // required: true
+      },
+      userEmail: {  // NEW FIELD ADD KAREIN
+        type: String,
+        // required: true
+      },
+      role: {
+        type: String,
+        enum: ["SUPER_ADMIN", "ADMIN", "USER"],
+        // required: true,
+      },
     },
 
     isActive: {

@@ -1,12 +1,14 @@
 import Prospect from "../models/Prospect.js";
 import Company from "../models/Company.js";
 import Suspect from "../models/Suspect.js";
+import User from "../models/User.js";
+import SuperAdmin from "../models/SuperAdmin.js";
 
 export const createProspect = async (req, res) => {
   try {
     const {
       company,
-      suspect, 
+      suspect,
       prospectStatus,
       prospectSource,
       decisionMaker,
@@ -18,9 +20,21 @@ export const createProspect = async (req, res) => {
       lastFollowUp,
       nextFollowUp,
       followUpOwner,
-      contactSnapshots = [], 
-      contactPersonIds = []  
+      contactSnapshots = [],
+      contactPersonIds = []
     } = req.body;
+
+    // Database se user details fetch karein
+    let userDetails = null;
+    if (req.user.role === "SUPER_ADMIN") {
+      userDetails = await SuperAdmin.findById(req.user.id).select("name email");
+    } else {
+      userDetails = await User.findById(req.user.id).select("name email");
+    }
+
+    if (!userDetails) {
+      return res.status(404).json({ message: "User not found" });
+    }
 
     let companyDoc = null;
     let suspectDoc = null;
@@ -61,6 +75,8 @@ export const createProspect = async (req, res) => {
     const random = Math.random().toString(36).slice(2, 8).toUpperCase();
     const prospectId = `P-${year}-${random}`;
 
+    // ... rest of your existing code ...
+
     const prospectData = {
       prospectId,
       company: companyDoc._id,
@@ -89,12 +105,17 @@ export const createProspect = async (req, res) => {
       nextFollowUp,
       followUpOwner,
       status: "OPEN",
+      // ... other fields ...
+      createdBy: {  // UPDATE THIS PART
+        userId: req.user.id,
+        userName: userDetails.name,     // Database se name
+        userEmail: userDetails.email,   // Database se email
+        role: req.user.role
+      },
       isActive: true,
-      createdBy: req.user.id
     };
 
     const prospect = await Prospect.create(prospectData);
-
     if (suspectDoc) {
       suspectDoc.status = "Converted";
       suspectDoc.isConverted = true;
@@ -105,6 +126,8 @@ export const createProspect = async (req, res) => {
       message: "Prospect created successfully",
       prospect
     });
+
+    // ... rest of your code ...
   } catch (err) {
     console.error("Create Prospect Error:", err);
     res.status(500).json({ message: err.message });
@@ -145,14 +168,36 @@ export const getProspectById = async (req, res) => {
       return res.status(404).json({ message: "Prospect not found" });
     }
 
+    // Permission check update karein
     if (
       req.user.role !== "SUPER_ADMIN" &&
-      prospect.createdBy.toString() !== req.user.id
+      prospect.createdBy.userId.toString() !== req.user.id
     ) {
       return res.status(403).json({ message: "Access denied" });
     }
- 
-    res.json(prospect);
+
+    // Agar needed ho toh user details fetch karein
+    let createdByUser = null;
+    if (prospect.createdBy?.userId) {
+      if (prospect.createdBy.role === "SUPER_ADMIN") {
+        createdByUser = await SuperAdmin.findById(prospect.createdBy.userId)
+          .select("name email");
+      } else {
+        createdByUser = await User.findById(prospect.createdBy.userId)
+          .select("name email");
+      }
+    }
+
+    // Response me createdByUser add karein
+    const response = {
+      ...prospect.toObject(),
+      createdByUser: createdByUser || {
+        name: prospect.createdBy?.userName || "Unknown",
+        email: prospect.createdBy?.userEmail || "N/A"
+      }
+    };
+
+    res.json(response);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -273,5 +318,89 @@ export const deleteProspect = async (req, res) => {
     res.json({ message: "Prospect deleted successfully" });
   } catch (err) {
     res.status(500).json({ message: err.message });
+  }
+};
+
+
+
+// prospectController.js me yeh function add karein
+export const searchProspects = async (req, res) => {
+  try {
+    const {
+      search,
+      company,
+      createdByUserId,
+      isActive,
+      prospectStatus,
+      prospectSource,
+      page = 1,
+      limit = 10
+    } = req.query;
+
+    let query = {};
+
+    // Permission check
+    if (req.user.role !== "SUPER_ADMIN") {
+      query["createdBy.userId"] = req.user.id;
+    }
+
+    // Search filter
+    if (search) {
+      query.$or = [
+        { prospectId: { $regex: search, $options: 'i' } },
+        { "companySnapshot.companyName": { $regex: search, $options: 'i' } },
+        { "suspectSnapshot.suspectName": { $regex: search, $options: 'i' } },
+        { "contactSnapshots.name": { $regex: search, $options: 'i' } },
+        { "contactSnapshots.email": { $regex: search, $options: 'i' } },
+        { "contactSnapshots.phone": { $regex: search, $options: 'i' } },
+        { requirement: { $regex: search, $options: 'i' } }
+      ];
+    }
+
+    if (company) {
+      query.company = company;
+    }
+
+    if (createdByUserId) {
+      query["createdBy.userId"] = createdByUserId;
+    }
+
+    if (isActive !== undefined) {
+      query.isActive = isActive === 'true';
+    }
+
+    if (prospectStatus) {
+      query.prospectStatus = prospectStatus;
+    }
+
+    if (prospectSource) {
+      query.prospectSource = prospectSource;
+    }
+
+    const skip = (page - 1) * limit;
+
+    const prospects = await Prospect.find(query)
+      .populate("company", "companyName")
+      .skip(skip)
+      .limit(parseInt(limit))
+      .sort({ createdAt: -1 });
+
+    const total = await Prospect.countDocuments(query);
+
+    res.json({
+      success: true,
+      data: prospects,
+      pagination: {
+        total,
+        page: parseInt(page),
+        pages: Math.ceil(total / limit),
+        limit: parseInt(limit)
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
   }
 };
