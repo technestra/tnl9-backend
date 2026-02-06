@@ -4,7 +4,7 @@ import cors from "cors";
 import connectDB from "./config/db.js";
 import superAdminRoutes from "./routes/superAdminRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
-import companyRoutes from "./routes/companyRoutes.js";
+import companyRoutes from "./routes/companyRoutes.js"; 
 import companyAssignmentRoutes from "./routes/companyAssignmentRoutes.js";
 import userRoutes from './routes/userRoutes.js';
 import employeeProfileRoutes from './routes/employeeProfileRoutes.js';

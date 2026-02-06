@@ -7,7 +7,9 @@ import {
   updateProspect,
   deleteProspect,
   toggleProspectActive,
-  searchProspects
+  searchProspects,
+  updateFollowup,
+  getFollowupHistory
 } from "../controllers/prospectController.js";
 
 const router = express.Router();
@@ -17,6 +19,10 @@ router.get("/", protect, getProspects);
 router.get("/:id", protect, getProspectById);
 router.put("/:id", protect, updateProspect);
 router.delete("/:id", protect, deleteProspect);
+
+// Add these routes
+router.put("/:id/followup", protect, updateFollowup);
+router.get("/:id/followup-history", protect, getFollowupHistory);
 
 // prospectRoutes.js me
 router.get("/search", protect, searchProspects);

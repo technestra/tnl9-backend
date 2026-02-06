@@ -451,3 +451,113 @@ export const searchLeads = async (req, res) => {
     });
   }
 };
+
+
+// Add these functions to leadController.js
+
+// Update followup for lead
+export const updateFollowup = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { 
+      lastFollowUp, 
+      lastFollowupComment,
+      nextFollowUp, 
+      nextFollowupComment 
+    } = req.body;
+
+    const lead = await Lead.findById(id);
+    if (!lead) {
+      return res.status(404).json({ message: "Lead not found" });
+    }
+
+    // Get user details
+    let userDetails = null;
+    if (req.user.role === "SUPER_ADMIN") {
+      userDetails = await SuperAdmin.findById(req.user.id).select("name email");
+    } else {
+      userDetails = await User.findById(req.user.id).select("name email");
+    }
+
+    // Prepare updates
+    const updates = {};
+    const historyEntry = {
+      date: new Date(),
+      performedBy: {
+        userId: req.user.id,
+        userName: userDetails?.name || req.user.name,
+        userEmail: userDetails?.email || req.user.email,
+        role: req.user.role
+      }
+    };
+
+    // Update last followup
+    if (lastFollowUp) {
+      updates.lastFollowUp = lastFollowUp;
+      updates.lastFollowupComment = lastFollowupComment;
+      
+      lead.followUpHistory.push({
+        ...historyEntry,
+        type: "Last Followup",
+        comment: lastFollowupComment || "Followup performed"
+      });
+    }
+
+    // Update next followup
+    if (nextFollowUp) {
+      updates.nextFollowUp = nextFollowUp;
+      updates.nextFollowupComment = nextFollowupComment;
+      
+      // Calculate reminder status
+      const today = new Date();
+      const nextDate = new Date(nextFollowUp);
+      const diffDays = Math.ceil((nextDate - today) / (1000 * 60 * 60 * 24));
+      
+      let status = "None";
+      if (diffDays < 0) status = "Overdue";
+      else if (diffDays === 0) status = "Today";
+      else if (diffDays === 1) status = "1 Day";
+      else if (diffDays === 2) status = "2 Days";
+      
+      updates.followupReminder = {
+        status,
+        notifiedAt: null
+      };
+      
+      lead.followUpHistory.push({
+        ...historyEntry,
+        type: "Next Followup",
+        comment: nextFollowupComment || "Next followup scheduled"
+      });
+    }
+
+    // Apply updates
+    Object.assign(lead, updates);
+    await lead.save();
+
+    res.json({
+      message: "Followup updated successfully",
+      lead
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Get followup history for lead
+export const getFollowupHistory = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const lead = await Lead.findById(id).select("followUpHistory");
+    
+    if (!lead) {
+      return res.status(404).json({ message: "Lead not found" });
+    }
+
+    res.json({
+      history: lead.followUpHistory || []
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};

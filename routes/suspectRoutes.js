@@ -8,7 +8,9 @@ import {
   deleteSuspect,
   getSuspectById,
   toggleSuspectActive,
-  searchSuspects
+  searchSuspects,
+  updateFollowup,
+  getFollowupHistory
 } from "../controllers/suspectController.js";
 
 const router = express.Router();
@@ -20,6 +22,10 @@ router.get("/suspects", protect, getAllSuspects);
 router.post("/companies/:companyId/suspects", protect, createSuspect);
 router.get("/companies/:companyId/suspects", protect, getCompanySuspects);
 router.get("/suspects/:id", protect, getSuspectById);
+
+// Add these routes
+router.put("/:id/followup", protect, updateFollowup);
+router.get("/:id/followup-history", protect, getFollowupHistory);
 
 // suspectRoutes.js me
 router.get("/search", protect, searchSuspects);

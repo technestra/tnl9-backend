@@ -37,12 +37,39 @@ const suspectSchema = new mongoose.Schema(
     firstContactedOn: {
       type: Date
     },
-    lastFollowedUpOn: {
-      type: Date
+    // lastFollowedUpOn: {
+    //   type: Date
+    // },
+    // nextFollowUpOn: {
+    //   type: Date
+    // },
+    // Add these fields to your suspectSchema
+followUpHistory: [
+  {
+    date: { type: Date, required: true },
+    type: { 
+      type: String, 
+      enum: ["Last Followup", "Next Followup", "General"],
+      required: true 
     },
-    nextFollowUpOn: {
-      type: Date
+    comment: { type: String, required: true },
+    performedBy: {
+      userId: mongoose.Schema.Types.ObjectId,
+      userName: String,
+      userEmail: String,
+      role: String
     },
+    performedAt: { type: Date, default: Date.now }
+  }
+],
+lastFollowedUpOn: Date,
+lastFollowupComment: String,
+nextFollowUpOn: Date,
+nextFollowupComment: String,
+followupReminder: {
+  status: { type: String, enum: ["None", "Today", "1 Day", "2 Days", "Overdue"], default: "None" },
+  notifiedAt: Date
+},
     interestLevel: {
       type: String,
       enum: ["High", "Medium", "Low"]

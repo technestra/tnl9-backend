@@ -321,3 +321,112 @@ export const searchSuspects = async (req, res) => {
     });
   }
 };
+
+
+
+// Add this function
+export const updateFollowup = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { 
+      lastFollowedUpOn, 
+      lastFollowupComment,
+      nextFollowUpOn, 
+      nextFollowupComment 
+    } = req.body;
+
+    const suspect = await Suspect.findById(id);
+    if (!suspect) {
+      return res.status(404).json({ message: "Suspect not found" });
+    }
+
+    // Get user details
+    let userDetails = null;
+    if (req.user.role === "SUPER_ADMIN") {
+      userDetails = await SuperAdmin.findById(req.user.id).select("name email");
+    } else {
+      userDetails = await User.findById(req.user.id).select("name email");
+    }
+
+    // Prepare updates
+    const updates = {};
+    const historyEntry = {
+      date: new Date(),
+      performedBy: {
+        userId: req.user.id,
+        userName: userDetails?.name || req.user.name,
+        userEmail: userDetails?.email || req.user.email,
+        role: req.user.role
+      }
+    };
+
+    // Update last followup
+    if (lastFollowedUpOn) {
+      updates.lastFollowedUpOn = lastFollowedUpOn;
+      updates.lastFollowupComment = lastFollowupComment;
+      
+      suspect.followUpHistory.push({
+        ...historyEntry,
+        type: "Last Followup",
+        comment: lastFollowupComment || "Followup performed"
+      });
+    }
+
+    // Update next followup
+    if (nextFollowUpOn) {
+      updates.nextFollowUpOn = nextFollowUpOn;
+      updates.nextFollowupComment = nextFollowupComment;
+      
+      // Calculate reminder status
+      const today = new Date();
+      const nextDate = new Date(nextFollowUpOn);
+      const diffDays = Math.ceil((nextDate - today) / (1000 * 60 * 60 * 24));
+      
+      let status = "None";
+      if (diffDays < 0) status = "Overdue";
+      else if (diffDays === 0) status = "Today";
+      else if (diffDays === 1) status = "1 Day";
+      else if (diffDays === 2) status = "2 Days";
+      
+      updates.followupReminder = {
+        status,
+        notifiedAt: null
+      };
+      
+      suspect.followUpHistory.push({
+        ...historyEntry,
+        type: "Next Followup",
+        comment: nextFollowupComment || "Next followup scheduled"
+      });
+    }
+
+    // Apply updates
+    Object.assign(suspect, updates);
+    await suspect.save();
+
+    res.json({
+      message: "Followup updated successfully",
+      suspect
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Get followup history
+export const getFollowupHistory = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const suspect = await Suspect.findById(id).select("followUpHistory");
+    
+    if (!suspect) {
+      return res.status(404).json({ message: "Suspect not found" });
+    }
+
+    res.json({
+      history: suspect.followUpHistory || []
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};

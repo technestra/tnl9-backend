@@ -8,7 +8,9 @@ import {
   updateLeadStage,
   getLeadById,
   toggleLeadActive,
-  searchLeads
+  searchLeads,
+  updateFollowup,
+  getFollowupHistory
 } from "../controllers/leadController.js";
 
 const router = express.Router();
@@ -20,6 +22,9 @@ router.put("/:id", protect, updateLead);
 router.delete("/:id", protect, deleteLead);
 router.put("/:id/stage", protect, updateLeadStage);
 // leadsRoutes.js me
+// Add these routes
+router.put("/:id/followup", protect, updateFollowup);
+router.get("/:id/followup-history", protect, getFollowupHistory);
 router.get("/search", protect, searchLeads);
 router.put("/:id/toggle-active", protect, toggleLeadActive)
 
