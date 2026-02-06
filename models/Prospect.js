@@ -117,24 +117,19 @@ const prospectSchema = new mongoose.Schema(
       default: "OPEN"
     },
 
-    // Prospect.js - createdBy schema update
     createdBy: {
       userId: {
         type: mongoose.Schema.Types.ObjectId,
-        // required: true,
       },
       userName: {
         type: String,
-        // required: true
       },
-      userEmail: {  // NEW FIELD ADD KAREIN
+      userEmail: {
         type: String,
-        // required: true
       },
       role: {
         type: String,
         enum: ["SUPER_ADMIN", "ADMIN", "USER"],
-        // required: true,
       },
     },
 

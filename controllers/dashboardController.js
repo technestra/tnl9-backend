@@ -28,8 +28,6 @@ export const getDashboardStats = async (req, res) => {
   }
 };
 
-
-
 export const getFunnelStats = async (req, res) => {
   try {
     const baseFilter =

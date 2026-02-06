@@ -30,13 +30,11 @@ const contactPersonSchema = new mongoose.Schema(
     contactLocation: String,
     addComment: String,
 
-    /* STATUS */
     isActive: {
       type: Boolean,
       default: true
     },
 
-    // ContactPerson.js - createdBy schema update
     createdBy: {
       userId: {
         type: mongoose.Schema.Types.ObjectId,
@@ -45,7 +43,7 @@ const contactPersonSchema = new mongoose.Schema(
       userName: {
         type: String,
       },
-      userEmail: {  // NEW FIELD ADD KAREIN
+      userEmail: { 
         type: String,
       },
       role: {

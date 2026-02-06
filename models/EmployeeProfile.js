@@ -43,8 +43,6 @@ const employeeProfileSchema = new mongoose.Schema(
       url: String,
       publicId: String
     },
-
-    /* ---------------- PROFESSIONAL INFO ---------------- */
     dateOfJoining: Date,
     employmentStatus: {
       type: String,

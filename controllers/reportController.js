@@ -58,7 +58,6 @@ export const monthlyReport = async (req, res) => {
   }
 };
 
-
 export const getMonthlyReport = async (req, res) => {
   try {
     if (req.user.role !== "SUPER_ADMIN") {
@@ -116,7 +115,6 @@ export const getMonthlyReport = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
-
 
 export const exportMonthlyReport = async (req, res) => {
   const { month, type } = req.query;

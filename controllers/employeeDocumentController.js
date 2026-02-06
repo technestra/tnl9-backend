@@ -21,9 +21,6 @@ export const generateCloudinarySignature = (req, res) => {
   });
 };
 
-
-
-
 export const uploadDocuments = async (req, res) => {
   try {
     console.log("Upload request started. Files received:", req.files ? Object.keys(req.files) : "No files");

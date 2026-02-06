@@ -69,25 +69,20 @@ const companySchema = new mongoose.Schema(
       default: true
     },
 
-    /* CREATED BY */
     createdBy: {
       userId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "User",
-        // required: true,
       },
       userName: {
         type: String,
-        // required: true
       },
       role: {
         type: String,
         enum: ["SUPER_ADMIN", "ADMIN", "USER"],
-        // required: true,
       },
     },
 
-    /* ASSIGNMENTS */
     assignedAdmins: [
       {
         type: mongoose.Schema.Types.ObjectId,
@@ -102,7 +97,7 @@ const companySchema = new mongoose.Schema(
       }
     ]
   },
-  { timestamps: true } // date/time automatically handled
+  { timestamps: true }
 );
 
 export default mongoose.model("Company", companySchema);

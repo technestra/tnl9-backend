@@ -81,7 +81,6 @@ const leadSchema = new mongoose.Schema(
       }
     ],
 
-    // models/Lead.js - Add these fields
 followUpHistory: [
   {
     date: { type: Date, required: true },
@@ -212,7 +211,7 @@ followupReminder: {
       userName: {
         type: String,
       },
-      userEmail: {   // Add this field
+      userEmail: {   
         type: String,
       },
       role: {

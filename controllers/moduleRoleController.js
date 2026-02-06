@@ -63,12 +63,10 @@ export const removeModuleRole = async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    // Remove the module role
     user.moduleRoles = user.moduleRoles.filter(
       role => role.module !== module
     );
 
-    // Update accessible modules
     user.accessibleModules = (user.accessibleModules || []).filter(
       m => m !== module
     );
@@ -88,7 +86,6 @@ export const removeModuleRole = async (req, res) => {
   }
 };
 
-// Get all users with their module roles
 export const getAllUsersWithModuleRoles = async (req, res) => {
   try {
     if (req.user.role !== "SUPER_ADMIN") {
@@ -113,7 +110,6 @@ export const getAllUsersWithModuleRoles = async (req, res) => {
   }
 };
 
-// Get module-wise permissions summary
 export const getModulePermissionsSummary = async (req, res) => {
   try {
     if (req.user.role !== "SUPER_ADMIN") {
@@ -122,7 +118,6 @@ export const getModulePermissionsSummary = async (req, res) => {
 
     const users = await User.find().select("name email role moduleRoles accessibleModules");
 
-    // Create module-wise summary
     const modules = ["finance", "sales", "vendor", "companyDeck", "resource"];
     const summary = {};
 

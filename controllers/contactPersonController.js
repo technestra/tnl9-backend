@@ -4,7 +4,6 @@ import Company from "../models/Company.js";
 import User from "../models/User.js";
 import SuperAdmin from "../models/SuperAdmin.js";
 
-// Update createContact function
 export const createContact = async (req, res) => {
   try {
     const company = await Company.findById(req.body.company);
@@ -12,7 +11,6 @@ export const createContact = async (req, res) => {
       return res.status(404).json({ message: "Company not found" });
     }
 
-    // Get user details
     let userDetails = null;
     if (req.user.role === "SUPER_ADMIN") {
       userDetails = await SuperAdmin.findById(req.user.id).select("name email");
@@ -34,8 +32,8 @@ export const createContact = async (req, res) => {
       },
       createdBy: {
         userId: req.user.id,
-        userName: userDetails.name,     // Store user name
-        userEmail: userDetails.email,   // Store user email
+        userName: userDetails.name,
+        userEmail: userDetails.email,
         role: req.user.role
       }
     });
@@ -46,7 +44,6 @@ export const createContact = async (req, res) => {
   }
 };
 
-// Add searchContacts function
 export const searchContacts = async (req, res) => {
   try {
     const {
@@ -60,12 +57,10 @@ export const searchContacts = async (req, res) => {
 
     let query = {};
 
-    // Permission check
     if (req.user.role !== "SUPER_ADMIN") {
       query["createdBy.userId"] = req.user.id;
     }
 
-    // Search filter
     if (search) {
       query.$or = [
         { name: { $regex: search, $options: 'i' } },
@@ -116,7 +111,6 @@ export const searchContacts = async (req, res) => {
   }
 };
 
-// Update getSingleContactPerson to populate createdBy
 export const getSingleContactPerson = async (req, res) => {
   try {
     const contact = await ContactPerson.findById(req.params.id)
@@ -130,7 +124,6 @@ export const getSingleContactPerson = async (req, res) => {
       return res.status(403).json({ message: "Access denied" });
     }
 
-    // Get user details for createdBy if needed
     let createdByUser = null;
     if (contact.createdBy?.userId) {
       if (contact.createdBy.role === "SUPER_ADMIN") {

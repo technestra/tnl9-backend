@@ -9,8 +9,7 @@ export const createCompany = async (req, res) => {
       companyEmail,
       companyWebsite = "",
       companyLinkedin = "",
-      // coordinatorContactNumber,
-      companyCapability = [],           // default empty array
+      companyCapability = [],
       companySize = "Not specified",
       companySource = "Other",
       companyAddress = "Not provided",

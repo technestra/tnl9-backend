@@ -34,9 +34,9 @@ export const loginUser = async (req, res) => {
         _id: user._id,
         name: user.name,
         email: user.email,
-        role: user.role, // Fixed role
-        moduleRoles: user.moduleRoles || [], // Module-specific roles
-        accessibleModules: user.accessibleModules || [] // Which modules user can access
+        role: user.role,
+        moduleRoles: user.moduleRoles || [],
+        accessibleModules: user.accessibleModules || []
       }
     });
 
