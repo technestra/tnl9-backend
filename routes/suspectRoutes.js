@@ -10,8 +10,11 @@ import {
   toggleSuspectActive,
   searchSuspects,
   updateFollowup,
-  getFollowupHistory
+  getFollowupHistory,
+  softDeleteSuspect, restoreSuspect, getTrashSuspect, permanentDeleteSuspect
 } from "../controllers/suspectController.js";
+import { allowRoles } from "../middlewares/roleMiddleware.js";
+import { checkOwnership } from "../middlewares/ownershipMiddleware.js";
 
 const router = express.Router();
 
@@ -30,8 +33,13 @@ router.get("/:id/followup-history", protect, getFollowupHistory);
 // suspectRoutes.js me
 router.get("/search", protect, searchSuspects);
 /* SINGLE */
-router.put("/suspects/:id", protect, updateSuspect);
+router.put("/suspects/:id", protect, checkOwnership('Suspect'), updateSuspect);
 router.delete("/suspects/:id", protect, deleteSuspect);
 router.put("/:id/toggle-active", protect, toggleSuspectActive);
+
+router.delete("/:id/soft", protect, checkOwnership('Suspect'), softDeleteSuspect); // Soft delete
+router.get("/trash/all", protect, allowRoles('SUPER_ADMIN'), getTrashSuspect); // Get trash
+router.patch("/:id/restore", protect, allowRoles('SUPER_ADMIN'), restoreSuspect); // Restore
+router.delete("/:id/permanent", protect, allowRoles('SUPER_ADMIN'), permanentDeleteSuspect); 
 
 export default router;

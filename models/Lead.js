@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import softDeletePlugin from "../middlewares/softDeletePlugin.js";
 
 const leadSchema = new mongoose.Schema(
   {
@@ -231,4 +232,5 @@ leadSchema.pre("save", async function () {
   }
 });
 
+leadSchema.plugin(softDeletePlugin);
 export default mongoose.model("Lead", leadSchema);

@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import softDeletePlugin from "../middlewares/softDeletePlugin.js";
 
 const suspectSchema = new mongoose.Schema(
   {
@@ -134,4 +135,5 @@ const suspectSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+suspectSchema.plugin(softDeletePlugin);
 export default mongoose.model("Suspect", suspectSchema);

@@ -1,5 +1,6 @@
 
 import mongoose from "mongoose";
+import softDeletePlugin from "../middlewares/softDeletePlugin.js";
 
 const documentItemSchema = new mongoose.Schema({
   url: String,
@@ -49,4 +50,5 @@ const employeeDocumentSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+employeeDocumentSchema.plugin(softDeletePlugin);
 export default mongoose.model("EmployeeDocument", employeeDocumentSchema);

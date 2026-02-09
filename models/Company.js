@@ -1,7 +1,14 @@
 import mongoose from "mongoose";
+import softDeletePlugin from "../middlewares/softDeletePlugin.js";
+import { v4 as uuidv4 } from 'uuid';
 
 const companySchema = new mongoose.Schema(
   {
+    companyId: {
+      type: String,
+      unique: true,
+      sparse: true,
+    },
     /* BASIC INFO */
     companyName: {
       type: String,
@@ -17,7 +24,8 @@ const companySchema = new mongoose.Schema(
     companyEmail: {
       type: String,
       required: true,
-      lowercase: true
+      lowercase: true,
+      unique: true
     },
 
     companyWebsite: {
@@ -100,4 +108,11 @@ const companySchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+companySchema.pre("save", async function () {
+  if (!this.companyId) {
+    this.companyId = uuidv4(); // e.g., "550e8400-e29b-41d4-a716-446655440000"
+  }
+});
+
+companySchema.plugin(softDeletePlugin);
 export default mongoose.model("Company", companySchema);

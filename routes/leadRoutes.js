@@ -10,15 +10,18 @@ import {
   toggleLeadActive,
   searchLeads,
   updateFollowup,
-  getFollowupHistory
+  getFollowupHistory,
+  softDeleteLead, restoreLead, getTrashLead, permanentDeleteLead
 } from "../controllers/leadController.js";
+import { allowRoles } from "../middlewares/roleMiddleware.js";
+import { checkOwnership } from "../middlewares/ownershipMiddleware.js";
 
 const router = express.Router();
 
 router.post("/", protect, createLead);
 router.get("/", protect, getLeads);
 router.get("/:id", protect, getLeadById);
-router.put("/:id", protect, updateLead);
+router.put("/:id", protect, checkOwnership("Lead"), updateLead);
 router.delete("/:id", protect, deleteLead);
 router.put("/:id/stage", protect, updateLeadStage);
 // leadsRoutes.js me
@@ -28,5 +31,9 @@ router.get("/:id/followup-history", protect, getFollowupHistory);
 router.get("/search", protect, searchLeads);
 router.put("/:id/toggle-active", protect, toggleLeadActive)
 
+router.delete("/:id/soft", protect, checkOwnership("Lead"), softDeleteLead); // Soft delete
+router.get("/trash/all", protect, allowRoles('SUPER_ADMIN'), getTrashLead); // Get trash
+router.patch("/:id/restore", protect, allowRoles('SUPER_ADMIN'), restoreLead); // Restore
+router.delete("/:id/permanent", protect, allowRoles('SUPER_ADMIN'), permanentDeleteLead); 
 
 export default router;

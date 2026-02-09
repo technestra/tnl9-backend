@@ -235,8 +235,122 @@ export const getSuspectById = async (req, res) => {
   }
 };
 
+// export const searchSuspects = async (req, res) => {
+//   try {
+//     const {
+//       search,
+//       company,
+//       createdByUserId,
+//       isActive,
+//       status,
+//       page = 1,
+//       limit = 10
+//     } = req.query;
+
+//     let query = {};
+
+//     // Current (only SUPER_ADMIN check):
+//     if (req.user.role !== "SUPER_ADMIN") {
+//       query["createdBy.userId"] = req.user.id;
+//     }
+
+//     // Companies pattern ke hisaab se hoga:
+//     if (req.user.role === "SUPER_ADMIN") {
+//       // No restriction
+//     } else if (req.user.role === "ADMIN") {
+//       query.$or = [
+//         { "createdBy.userId": req.user.id },
+//         { assignedAdmins: req.user.id } // Suspect model me assignedAdmins/Users field hai?
+//       ];
+//     } else {
+//       query.$or = [
+//         { "createdBy.userId": req.user.id },
+//         { assignedUsers: req.user.id }
+//       ];
+//     }
+
+//     // if (search) {
+//     //   query.$or = [
+//         // { suspectId: { $regex: search, $options: 'i' } },
+//         // { "companySnapshot.companyName": { $regex: search, $options: 'i' } },
+//         // { "contactSnapshots.name": { $regex: search, $options: 'i' } },
+//         // { "contactSnapshots.email": { $regex: search, $options: 'i' } },
+//         // { "contactSnapshots.phone": { $regex: search, $options: 'i' } }
+//     //   ];
+//     // }
+//     // Companies pattern jaise karna hoga:
+// if (search && search.trim()) {
+//   const searchQuery = {
+//     $or: [ 
+//         { suspectId: { $regex: search, $options: 'i' } },
+//         { "companySnapshot.companyName": { $regex: search, $options: 'i' } },
+//         { "contactSnapshots.name": { $regex: search, $options: 'i' } },
+//         { "contactSnapshots.email": { $regex: search, $options: 'i' } },
+//         { "contactSnapshots.phone": { $regex: search, $options: 'i' } }
+//      ]
+//   };
+  
+//   if (query.$or) {
+//     query = { 
+//       $and: [
+//         { $or: query.$or },
+//         searchQuery
+//       ] 
+//     };
+//   } else {
+//     query = searchQuery;
+//   }
+// }
+
+//     if (company) {
+//       query.company = company;
+//     }
+
+//     if (createdByUserId) {
+//       query["createdBy.userId"] = createdByUserId;
+//     }
+
+//     if (isActive !== undefined) {
+//       query.isActive = isActive === 'true';
+//     }
+
+//     if (status) {
+//       query.status = status;
+//     }
+
+//     const skip = (page - 1) * limit;
+
+//     const suspects = await Suspect.find(query)
+//       .populate("company", "companyName")
+//       .skip(skip)
+//       .limit(parseInt(limit))
+//       .sort({ createdAt: -1 });
+
+//     const total = await Suspect.countDocuments(query);
+
+//     res.json({
+//       success: true,
+//       data: suspects,
+//       pagination: {
+//         total,
+//         page: parseInt(page),
+//         pages: Math.ceil(total / limit),
+//         limit: parseInt(limit)
+//       }
+//     });
+//   } catch (error) {
+//     res.status(500).json({
+//       success: false,
+//       message: error.message
+//     });
+//   }
+// };
 export const searchSuspects = async (req, res) => {
   try {
+    console.log("=== SEARCH SUSPECTS API CALLED ===");
+    console.log("User:", req.user.id, req.user.role);
+    console.log("Query params:", req.query);
+
     const {
       search,
       company,
@@ -249,20 +363,49 @@ export const searchSuspects = async (req, res) => {
 
     let query = {};
 
-    if (req.user.role !== "SUPER_ADMIN") {
-      query["createdBy.userId"] = req.user.id;
-    }
-
-    if (search) {
+    // ✅ YE ADD KARNA HAI - Companies wala pattern
+    // Role-based access
+    if (req.user.role === "SUPER_ADMIN") {
+      // No restriction for super admin
+    } else if (req.user.role === "ADMIN") {
       query.$or = [
-        { suspectId: { $regex: search, $options: 'i' } },
-        { "companySnapshot.companyName": { $regex: search, $options: 'i' } },
-        { "contactSnapshots.name": { $regex: search, $options: 'i' } },
-        { "contactSnapshots.email": { $regex: search, $options: 'i' } },
-        { "contactSnapshots.phone": { $regex: search, $options: 'i' } }
+        { "createdBy.userId": req.user.id },
+        { assignedAdmins: req.user.id } // Suspect model me ye field add karna padega
+      ];
+    } else {
+      query.$or = [
+        { "createdBy.userId": req.user.id },
+        { assignedUsers: req.user.id } // Suspect model me ye field add karna padega
       ];
     }
 
+    // ✅ YE CHANGE KARNA HAI - Search query combine karo
+    // Search filter
+    if (search && search.trim()) {
+      const searchQuery = {
+        $or: [
+          { suspectId: { $regex: search.trim(), $options: 'i' } },
+          { "companySnapshot.companyName": { $regex: search.trim(), $options: 'i' } },
+          { "contactSnapshots.name": { $regex: search.trim(), $options: 'i' } },
+          { "contactSnapshots.email": { $regex: search.trim(), $options: 'i' } },
+          { "contactSnapshots.phone": { $regex: search.trim(), $options: 'i' } }
+        ]
+      };
+
+      // Combine with existing query (Companies pattern)
+      if (query.$or) {
+        query = { 
+          $and: [
+            { $or: query.$or },
+            searchQuery
+          ] 
+        };
+      } else {
+        query = searchQuery;
+      }
+    }
+
+    // ✅ YE RAKHNA HAI (same)
     if (company) {
       query.company = company;
     }
@@ -271,38 +414,51 @@ export const searchSuspects = async (req, res) => {
       query["createdBy.userId"] = createdByUserId;
     }
 
-    if (isActive !== undefined) {
-      query.isActive = isActive === 'true';
+    if (isActive !== undefined && isActive !== 'all') {
+      query.isActive = isActive === 'true' || isActive === true;
     }
 
     if (status) {
       query.status = status;
     }
 
-    const skip = (page - 1) * limit;
+    // ✅ YE ADD KARNA HAI - Pagination parsing
+    const pageNum = parseInt(page);
+    const limitNum = parseInt(limit);
+    const skip = (pageNum - 1) * limitNum;
+
+    console.log("Final Query:", JSON.stringify(query, null, 2));
+    console.log("Skip:", skip, "Limit:", limitNum);
 
     const suspects = await Suspect.find(query)
       .populate("company", "companyName")
       .skip(skip)
-      .limit(parseInt(limit))
+      .limit(limitNum)
       .sort({ createdAt: -1 });
 
     const total = await Suspect.countDocuments(query);
+
+    console.log("Found suspects:", suspects.length, "Total:", total);
 
     res.json({
       success: true,
       data: suspects,
       pagination: {
         total,
-        page: parseInt(page),
-        pages: Math.ceil(total / limit),
-        limit: parseInt(limit)
+        page: pageNum,
+        pages: Math.ceil(total / limitNum),
+        limit: limitNum
       }
     });
   } catch (error) {
+    console.error("=== SEARCH SUSPECTS ERROR ===");
+    console.error("Error Message:", error.message);
+    console.error("Error Stack:", error.stack);
+    
     res.status(500).json({
       success: false,
-      message: error.message
+      message: error.message,
+      details: error.toString()
     });
   }
 };
@@ -402,5 +558,143 @@ export const getFollowupHistory = async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
+  }
+};
+
+
+
+
+
+// Soft delete company
+export const softDeleteSuspect = async (req, res) => {
+  try {
+    const suspect = await Suspect.findById(req.params.id);
+
+    if (!suspect) {
+      return res.status(404).json({
+        success: false,
+        message: "Suspect not found"
+      });
+    }
+
+    // Permission check
+    if (req.user.role !== "SUPER_ADMIN" &&
+      suspect.createdBy.userId.toString() !== req.user.id) {
+      return res.status(403).json({
+        success: false,
+        message: "No permission to delete this Suspect"
+      });
+    }
+
+    await suspect.softDelete(req.user.id);
+
+    res.json({
+      success: true,
+      message: "Suspect moved to trash"
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+// Restore Suspect from trash
+export const restoreSuspect = async (req, res) => {
+  try {
+    if (req.user.role !== "SUPER_ADMIN") {
+      return res.status(403).json({
+        success: false,
+        message: "Only Super Admin can restore Suspect"
+      });
+    }
+
+    const suspect = await Suspect.findById(req.params.id);
+
+    if (!suspect) {
+      return res.status(404).json({
+        success: false,
+        message: "Suspect not found"
+      });
+    }
+
+    await suspect.restore();
+
+    res.json({
+      success: true,
+      message: "Suspect restored successfully",
+      suspect
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+// Get trash Suspect
+export const getTrashSuspect = async (req, res) => {
+  try {
+    if (req.user.role !== "SUPER_ADMIN") {
+      return res.status(403).json({
+        success: false,
+        message: "Access denied"
+      });
+    }
+
+    const Suspects = await Suspect.findDeleted()
+      .populate("deletedBy", "name email")
+      .sort({ deletedAt: -1 });
+
+    res.json({
+      success: true,
+      data: Suspects
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+// Permanent delete
+export const permanentDeleteSuspect = async (req, res) => {
+  try {
+    if (req.user.role !== "SUPER_ADMIN") {
+      return res.status(403).json({
+        success: false,
+        message: "Only Super Admin can permanently delete"
+      });
+    }
+
+    const suspect = await Suspect.findById(req.params.id);
+
+    if (!suspect) {
+      return res.status(404).json({
+        success: false,
+        message: "Suspect not found"
+      });
+    }
+
+    // Remove company from users' Suspects array
+    await User.updateMany(
+      { Suspects: suspect._id },
+      { $pull: { Suspects: suspect._id } }
+    );
+
+    await suspect.deleteOne();
+
+    res.json({
+      success: true,
+      message: "Suspect permanently deleted"
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
   }
 };

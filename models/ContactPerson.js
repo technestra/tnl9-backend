@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import softDeletePlugin from "../middlewares/softDeletePlugin.js";
 
 const contactPersonSchema = new mongoose.Schema(
   {
@@ -55,4 +56,5 @@ const contactPersonSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+contactPersonSchema.plugin(softDeletePlugin);
 export default mongoose.model("ContactPerson", contactPersonSchema);

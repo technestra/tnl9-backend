@@ -231,3 +231,140 @@ export const toggleContactActive = async (req, res) => {
 };
 
 
+
+
+
+
+// Soft delete company
+export const softDeleteContactPerson = async (req, res) => {
+  try {
+    const contactPerson = await ContactPerson.findById(req.params.id);
+    
+    if (!contactPerson) {
+      return res.status(404).json({ 
+        success: false,
+        message: "Contact Person not found" 
+      });
+    }
+
+    // Permission check
+    if (req.user.role !== "SUPER_ADMIN" && 
+        contactPerson.createdBy.userId.toString() !== req.user.id) {
+      return res.status(403).json({ 
+        success: false,
+        message: "No permission to delete this Contact Person" 
+      });
+    }
+
+    await contactPerson.softDelete(req.user.id);
+    
+    res.json({
+      success: true,
+      message: "Contact Person moved to trash"
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      success: false,
+      message: error.message 
+    });
+  }
+};
+
+// Restore company from trash
+export const restoreContactPerson = async (req, res) => {
+  try {
+    if (req.user.role !== "SUPER_ADMIN") {
+      return res.status(403).json({ 
+        success: false,
+        message: "Only Super Admin can restore Contact Person" 
+      });
+    }
+
+    const contactPerson = await ContactPerson.findById(req.params.id);
+    
+    if (!contactPerson) {
+      return res.status(404).json({ 
+        success: false,
+        message: "Contact Person not found" 
+      });
+    }
+
+    await contactPerson.restore();
+    
+    res.json({
+      success: true,
+      message: "Contact Person restored successfully",
+      contactPerson
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      success: false,
+      message: error.message 
+    });
+  }
+};
+
+// Get trash ContactPerson
+export const getTrashContactPerson = async (req, res) => {
+  try {
+    if (req.user.role !== "SUPER_ADMIN") {
+      return res.status(403).json({ 
+        success: false,
+        message: "Access denied" 
+      });
+    }
+
+    const contactPerson = await ContactPerson.findDeleted()
+      .populate("deletedBy", "name email")
+      .sort({ deletedAt: -1 });
+    
+    res.json({
+      success: true,
+      data: contactPerson
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      success: false,
+      message: error.message 
+    });
+  }
+};
+
+// Permanent delete
+export const permanentDeleteContactPerson = async (req, res) => {
+  try {
+    if (req.user.role !== "SUPER_ADMIN") {
+      return res.status(403).json({ 
+        success: false,
+        message: "Only Super Admin can permanently delete" 
+      });
+    }
+
+    const contactPerson = await Company.findById(req.params.id);
+    
+    if (!contactPerson) {
+      return res.status(404).json({ 
+        success: false,
+        message: "Contact Person not found" 
+      });
+    }
+
+    // Remove company from users' companies array
+    await User.updateMany(
+      { contactPerson: contactPerson._id },
+      { $pull: { contactPersons: contactPerson._id } }
+    );
+
+    await contactPerson.deleteOne();
+    
+    res.json({
+      success: true,
+      message: "ContactPerson permanently deleted"
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      success: false,
+      message: error.message 
+    });
+  }
+};

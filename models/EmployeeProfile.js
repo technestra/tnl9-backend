@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import softDeletePlugin from "../middlewares/softDeletePlugin.js";
 
 const employeeProfileSchema = new mongoose.Schema(
   {
@@ -110,4 +111,5 @@ const employeeProfileSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+employeeProfileSchema.plugin(softDeletePlugin);
 export default mongoose.model("EmployeeProfile", employeeProfileSchema);

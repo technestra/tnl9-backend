@@ -17,6 +17,8 @@ import reportRoutes from "./routes/reportRoutes.js";
 import contactPersonRoutes from "./routes/contactPersonRoutes.js";
 import importRoutes from "./routes/importRoutes.js";
 import moduleRoleRoutes from "./routes/moduleRoleRoutes.js";
+import errorHandler from "./middlewares/errorHandler.js";
+import notFound from "./middlewares/notFound.js";
 
 dotenv.config();
 connectDB();
@@ -43,9 +45,8 @@ app.use(
 
 app.use(express.json());
 
-
-app.use("/api/super-admin", superAdminRoutes);
 app.use("/api/auth", authRoutes);
+app.use("/api/super-admin", superAdminRoutes);
 app.use("/api/companies", companyRoutes);
 app.use("/api/company-access", companyAssignmentRoutes);
 app.use('/api/employee', employeeProfileRoutes);
@@ -59,6 +60,9 @@ app.use("/api/reports", reportRoutes);
 app.use("/api/contacts", contactPersonRoutes);
 app.use("/api/import", importRoutes);
 app.use("/api/module-roles", moduleRoleRoutes);
+
+app.use(notFound);
+app.use(errorHandler);
 
 app.get("/", (req, res) => {
 res.send("API Running");

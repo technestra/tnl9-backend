@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-
+import softDeletePlugin from "../middlewares/softDeletePlugin.js";
 
 const superAdminSchema = new mongoose.Schema({
     name: {
@@ -22,5 +22,5 @@ const superAdminSchema = new mongoose.Schema({
     isActive: { type: Boolean, default: true }
 }, { timestamps: true });
 
-
+superAdminSchema.plugin(softDeletePlugin);
 export default mongoose.model("SuperAdmin", superAdminSchema);

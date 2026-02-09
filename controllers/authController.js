@@ -7,26 +7,56 @@ export const loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    let user = await SuperAdmin.findOne({ email });
-    let role = "SUPER_ADMIN";
+    // 1. पहले SUPER_ADMIN check करें
+    let superAdmin = await SuperAdmin.findOne({ email, isActive: true });
+    
+    if (superAdmin) {
+      // SuperAdmin password check
+      const isMatch = await bcrypt.compare(password, superAdmin.password);
+      if (!isMatch) {
+        return res.status(401).json({ message: "Invalid credentials" });
+      }
 
-    if (!user) {
-      user = await User.findOne({ email, isActive: true });
-      if (!user) return res.status(404).json({ message: "Invalid credentials" });
+      const token = jwt.sign(
+        { 
+          id: superAdmin._id, 
+          role: "SUPER_ADMIN" 
+        }, 
+        process.env.JWT_SECRET, 
+        { expiresIn: "1d" }
+      );
 
-      role = user.role;
-    }
-
-    if (!user.isActive) {
-      return res.status(403).json({
-        message: "Your account is deactivated. Contact Super Admin."
+      return res.json({
+        token,
+        user: {
+          _id: superAdmin._id,
+          name: superAdmin.name,
+          email: superAdmin.email,
+          role: "SUPER_ADMIN"
+        }
       });
     }
 
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) return res.status(401).json({ message: "Invalid credentials" });
+    // 2. अगर SuperAdmin नहीं है, तो User check करें
+    let user = await User.findOne({ email, isActive: true });
+    
+    if (!user) {
+      return res.status(404).json({ message: "Invalid credentials" });
+    }
 
-    const token = jwt.sign({ id: user._id, role }, process.env.JWT_SECRET, { expiresIn: "1d" });
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(401).json({ message: "Invalid credentials" });
+    }
+
+    const token = jwt.sign(
+      { 
+        id: user._id, 
+        role: user.role 
+      }, 
+      process.env.JWT_SECRET, 
+      { expiresIn: "1d" }
+    );
 
     res.json({
       token,

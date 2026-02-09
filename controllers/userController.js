@@ -77,17 +77,62 @@ export const createUserByAdmin = async (req, res) => {
   }
 };
 
+// export const getMe = async (req, res) => {
+//   try {
+//     const user = await User.findById(req.user.id).select("-password");
+//     if (!user) {
+//       return res.status(404).json({ message: "User not found" });
+//     }
+//     res.json(user);
+//   } catch (err) {
+//     res.status(500).json({ message: err.message });
+//   }
+// };
 export const getMe = async (req, res) => {
   try {
-    const user = await User.findById(req.user.id).select("-password");
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
+    console.log("📊 getMe called for user ID:", req.user.id);
+    
+    // For SUPER_ADMIN
+    if (req.user.role === "SUPER_ADMIN") {
+      console.log("👑 Fetching SUPER_ADMIN data");
+      // Return SUPER_ADMIN data structure
+      return res.json({
+        _id: req.user.id,
+        name: req.user.name,
+        email: req.user.email,
+        role: "SUPER_ADMIN",
+        isActive: true,
+        accessibleModules: ["finance", "sales", "vendor", "companyDeck", "resource"],
+        moduleRoles: []
+      });
     }
+
+    // For regular users (ADMIN/USER)
+    console.log("👤 Fetching regular user data");
+    const user = await User.findById(req.user.id)
+      .select("-password")
+      .populate("companies", "companyName");
+    
+    if (!user) {
+      console.log("❌ User not found in database");
+      return res.status(404).json({ 
+        success: false,
+        message: "User not found" 
+      });
+    }
+
+    console.log("✅ User found:", user.email);
     res.json(user);
+
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    console.error("❌ Error in getMe:", err);
+    res.status(500).json({ 
+      success: false,
+      message: err.message || "Server error in getMe" 
+    });
   }
 };
+
 
 export const deactivateUser = async (req, res) => {
   try {

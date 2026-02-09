@@ -357,8 +357,97 @@ export const toggleLeadActive = async (req, res) => {
   }
 };
 
+// export const searchLeads = async (req, res) => {
+//   try {
+//     const {
+//       search,
+//       company,
+//       createdByUserId,
+//       isActive,
+//       stage,
+//       engagementType,
+//       pipelineType,
+//       page = 1,
+//       limit = 10
+//     } = req.query;
+
+//     let query = {};
+
+//     if (req.user.role !== "SUPER_ADMIN") {
+//       query["createdBy.userId"] = req.user.id;
+//     }
+
+//     if (search) {
+//       query.$or = [
+//         { leadId: { $regex: search, $options: 'i' } },
+//         { leadName: { $regex: search, $options: 'i' } },
+//         { "companySnapshot.companyName": { $regex: search, $options: 'i' } },
+//         { "contactSnapshots.name": { $regex: search, $options: 'i' } },
+//         { "contactSnapshots.email": { $regex: search, $options: 'i' } },
+//         { "contactSnapshots.phone": { $regex: search, $options: 'i' } },
+//         { requirement: { $regex: search, $options: 'i' } },
+//         { domain: { $regex: search, $options: 'i' } },
+//         { jobTitle: { $regex: search, $options: 'i' } }
+//       ];
+//     }
+
+//     if (company) {
+//       query.company = company;
+//     }
+
+//     if (createdByUserId) {
+//       query["createdBy.userId"] = createdByUserId;
+//     }
+
+//     if (isActive !== undefined) {
+//       query.isActive = isActive === 'true';
+//     }
+
+//     if (stage) {
+//       query.stage = stage;
+//     }
+
+//     if (engagementType) {
+//       query.engagementType = engagementType;
+//     }
+
+//     if (pipelineType) {
+//       query.pipelineType = pipelineType;
+//     }
+
+//     const skip = (page - 1) * limit;
+
+//     const leads = await Lead.find(query)
+//       .populate("company", "companyName")
+//       .skip(skip)
+//       .limit(parseInt(limit))
+//       .sort({ createdAt: -1 });
+
+//     const total = await Lead.countDocuments(query);
+
+//     res.json({
+//       success: true,
+//       data: leads,
+//       pagination: {
+//         total,
+//         page: parseInt(page),
+//         pages: Math.ceil(total / limit),
+//         limit: parseInt(limit)
+//       }
+//     });
+//   } catch (error) {
+//     res.status(500).json({
+//       success: false,
+//       message: error.message
+//     });
+//   }
+// };
 export const searchLeads = async (req, res) => {
   try {
+    console.log("=== SEARCH LEADS API CALLED ===");
+    console.log("User:", req.user.id, req.user.role);
+    console.log("Query params:", req.query);
+
     const {
       search,
       company,
@@ -373,24 +462,42 @@ export const searchLeads = async (req, res) => {
 
     let query = {};
 
+    // ✅ Role-based access - FIXED
     if (req.user.role !== "SUPER_ADMIN") {
       query["createdBy.userId"] = req.user.id;
     }
 
-    if (search) {
-      query.$or = [
-        { leadId: { $regex: search, $options: 'i' } },
-        { leadName: { $regex: search, $options: 'i' } },
-        { "companySnapshot.companyName": { $regex: search, $options: 'i' } },
-        { "contactSnapshots.name": { $regex: search, $options: 'i' } },
-        { "contactSnapshots.email": { $regex: search, $options: 'i' } },
-        { "contactSnapshots.phone": { $regex: search, $options: 'i' } },
-        { requirement: { $regex: search, $options: 'i' } },
-        { domain: { $regex: search, $options: 'i' } },
-        { jobTitle: { $regex: search, $options: 'i' } }
-      ];
+    // ✅ Search query - FIXED (Combine properly)
+    if (search && search.trim()) {
+      const searchQuery = {
+        $or: [
+          { leadId: { $regex: search.trim(), $options: 'i' } },
+          { leadName: { $regex: search.trim(), $options: 'i' } },
+          { "companySnapshot.companyName": { $regex: search.trim(), $options: 'i' } },
+          { requirement: { $regex: search.trim(), $options: 'i' } },
+          { domain: { $regex: search.trim(), $options: 'i' } },
+          { jobTitle: { $regex: search.trim(), $options: 'i' } }
+        ]
+      };
+
+      // If contactSnapshots exist
+      if (mongoose.model('Lead').schema.path('contactSnapshots')) {
+        searchQuery.$or.push(
+          { "contactSnapshots.name": { $regex: search.trim(), $options: 'i' } },
+          { "contactSnapshots.email": { $regex: search.trim(), $options: 'i' } },
+          { "contactSnapshots.phone": { $regex: search.trim(), $options: 'i' } }
+        );
+      }
+
+      // Combine with existing query
+      if (Object.keys(query).length > 0) {
+        query = { $and: [query, searchQuery] };
+      } else {
+        query = searchQuery;
+      }
     }
 
+    // ✅ Other filters
     if (company) {
       query.company = company;
     }
@@ -399,8 +506,8 @@ export const searchLeads = async (req, res) => {
       query["createdBy.userId"] = createdByUserId;
     }
 
-    if (isActive !== undefined) {
-      query.isActive = isActive === 'true';
+    if (isActive !== undefined && isActive !== 'all') {
+      query.isActive = isActive === 'true' || isActive === true;
     }
 
     if (stage) {
@@ -415,33 +522,47 @@ export const searchLeads = async (req, res) => {
       query.pipelineType = pipelineType;
     }
 
-    const skip = (page - 1) * limit;
+    // ✅ Pagination parsing - FIXED
+    const pageNum = parseInt(page) || 1;
+    const limitNum = parseInt(limit) || 10;
+    const skip = (pageNum - 1) * limitNum;
+
+    console.log("Final Query:", JSON.stringify(query, null, 2));
+    console.log("Skip:", skip, "Limit:", limitNum);
 
     const leads = await Lead.find(query)
       .populate("company", "companyName")
       .skip(skip)
-      .limit(parseInt(limit))
+      .limit(limitNum)
       .sort({ createdAt: -1 });
 
     const total = await Lead.countDocuments(query);
+
+    console.log("Found leads:", leads.length, "Total:", total);
 
     res.json({
       success: true,
       data: leads,
       pagination: {
         total,
-        page: parseInt(page),
-        pages: Math.ceil(total / limit),
-        limit: parseInt(limit)
+        page: pageNum,
+        pages: Math.ceil(total / limitNum),
+        limit: limitNum
       }
     });
   } catch (error) {
+    console.error("=== SEARCH LEADS ERROR ===");
+    console.error("Error Message:", error.message);
+    console.error("Error Stack:", error.stack);
+    
     res.status(500).json({
       success: false,
-      message: error.message
+      message: error.message || "Internal server error"
     });
   }
 };
+
+
 
 export const updateFollowup = async (req, res) => {
   try {
@@ -539,5 +660,141 @@ export const getFollowupHistory = async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
+  }
+};
+
+
+
+// Soft delete company
+export const softDeleteLead = async (req, res) => {
+  try {
+    const lead = await Lead.findById(req.params.id);
+    
+    if (!lead) {
+      return res.status(404).json({ 
+        success: false,
+        message: "Lead not found" 
+      });
+    }
+
+    // Permission check
+    if (req.user.role !== "SUPER_ADMIN" && 
+        lead.createdBy.userId.toString() !== req.user.id) {
+      return res.status(403).json({ 
+        success: false,
+        message: "No permission to delete this company" 
+      });
+    }
+
+    await lead.softDelete(req.user.id);
+    
+    res.json({
+      success: true,
+      message: "Lead moved to trash"
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      success: false,
+      message: error.message 
+    });
+  }
+};
+
+// Restore company from trash
+export const restoreLead = async (req, res) => {
+  try {
+    if (req.user.role !== "SUPER_ADMIN") {
+      return res.status(403).json({ 
+        success: false,
+        message: "Only Super Admin can restore Lead" 
+      });
+    }
+
+    const lead = await Lead.findById(req.params.id);
+    
+    if (!lead) {
+      return res.status(404).json({ 
+        success: false,
+        message: "Lead not found" 
+      });
+    }
+
+    await lead.restore();
+    
+    res.json({
+      success: true,
+      message: "Lead restored successfully",
+      lead
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      success: false,
+      message: error.message 
+    });
+  }
+};
+
+// Get trash Lead
+export const getTrashLead = async (req, res) => {
+  try {
+    if (req.user.role !== "SUPER_ADMIN") {
+      return res.status(403).json({ 
+        success: false,
+        message: "Access denied" 
+      });
+    }
+
+    const leads = await Lead.findDeleted()
+      .populate("deletedBy", "name email")
+      .sort({ deletedAt: -1 });
+    
+    res.json({
+      success: true,
+      data: lead
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      success: false,
+      message: error.message 
+    });
+  }
+};
+
+// Permanent delete
+export const permanentDeleteLead = async (req, res) => {
+  try {
+    if (req.user.role !== "SUPER_ADMIN") {
+      return res.status(403).json({ 
+        success: false,
+        message: "Only Super Admin can permanently delete" 
+      });
+    }
+
+    const lead = await Lead.findById(req.params.id);
+    
+    if (!lead) {
+      return res.status(404).json({ 
+        success: false,
+        message: "Lead not found" 
+      });
+    }
+
+    // Remove lead from users' companies array
+    await User.updateMany(
+      { leads: lead._id },
+      { $pull: { leads: lead._id } }
+    );
+
+    await lead.deleteOne();
+    
+    res.json({
+      success: true,
+      message: "Lead permanently deleted"
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      success: false,
+      message: error.message 
+    });
   }
 };
