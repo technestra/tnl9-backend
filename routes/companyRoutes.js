@@ -21,7 +21,7 @@ router.delete("/:id/soft", protect, softDeleteCompany);
 
 // Trash management routes
 router.get("/trash/all", protect, getTrashCompanies);
-router.patch("/:id/restore", protect, restoreCompany);
+router.put("/:id/restore", protect, restoreCompany);
 router.delete("/:id/permanent", protect, permanentDeleteCompany);
 router.delete("/trash/empty", protect, emptyTrash);
 

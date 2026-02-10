@@ -46,8 +46,8 @@ export const getAllAssets = async (req, res) => {
 
     const assets = await Asset.find(query)
       .sort({ createdAt: -1 })
-      // .populate('created_by', 'name email')
-      // .populate('updated_by', 'name email');
+    // .populate('created_by', 'name email')
+    // .populate('updated_by', 'name email');
 
     res.status(200).json({
       success: true,
@@ -102,23 +102,6 @@ export const trashAsset = async (req, res) => {
       });
     }
 
-    // // Update asset
-    // asset.isTrashed = true;
-    // asset.status = 'available'; // Reset status when trashed
-    // asset.assigned_to = null;
-    // asset.assigned_date = null;
-    // asset.return_date = new Date();
-    // asset.updated_by = req.user._id;
-
-    // // Add to history
-    // asset.history.push({
-    //   action: 'trashed',
-    //   date: new Date(),
-    //   remarks: 'Moved to trash',
-    //   performed_by: req.user._id
-    // });
-
-    // Update asset
     asset.isTrashed = true;
     asset.status = 'available';
     asset.assigned_to = null;
@@ -150,9 +133,9 @@ export const trashAsset = async (req, res) => {
   } catch (error) {
     await session.abortTransaction();
     session.endSession();
-    
+
     console.error('Trash asset error:', error);
-    
+
     if (error.name === 'ValidationError') {
       return res.status(400).json({
         success: false,
@@ -458,29 +441,29 @@ export const updateAsset = async (req, res) => {
 export const assignAsset = async (req, res) => {
   try {
     const { assigned_to, assigned_date } = req.body;
-    
+
     const asset = await Asset.findById(req.params.id);
-    
+
     if (!asset) {
       return res.status(404).json({
         success: false,
         message: 'Asset not found'
       });
     }
-    
+
     asset.assigned_to = assigned_to;
     asset.assigned_date = assigned_date || new Date();
     asset.status = 'assigned';
     asset.updated_by = req.user?.id;
-    
+
     asset.history.push({
       action: 'assigned',
       to: assigned_to,
       date: asset.assigned_date
     });
-    
+
     await asset.save();
-    
+
     res.status(200).json({
       success: true,
       message: 'Asset assigned successfully',
@@ -501,34 +484,34 @@ export const assignAsset = async (req, res) => {
 export const returnAsset = async (req, res) => {
   try {
     const { return_date, return_condition, return_remarks } = req.body;
-    
+
     const asset = await Asset.findById(req.params.id);
-    
+
     if (!asset) {
       return res.status(404).json({
         success: false,
         message: 'Asset not found'
       });
     }
-    
+
     asset.return_date = return_date || new Date();
     asset.return_condition = return_condition;
     asset.return_remarks = return_remarks;
     asset.updated_by = req.user?.id;
-    
+
     asset.history.push({
       action: 'returned',
       date: asset.return_date,
       condition: return_condition,
       remarks: return_remarks
     });
-    
+
     asset.assigned_to = null;
     asset.assigned_date = null;
     asset.status = 'available';
-    
+
     await asset.save();
-    
+
     res.status(200).json({
       success: true,
       message: 'Asset returned successfully',
@@ -551,7 +534,7 @@ export const getAssetStats = async (req, res) => {
     const totalAssets = await Asset.countDocuments();
     const assignedAssets = await Asset.countDocuments({ status: 'assigned' });
     const availableAssets = await Asset.countDocuments({ status: 'available' });
-    
+
     const assetsByCategory = await Asset.aggregate([
       {
         $group: {
@@ -560,7 +543,7 @@ export const getAssetStats = async (req, res) => {
         }
       }
     ]);
-    
+
     const assetsByCompany = await Asset.aggregate([
       {
         $group: {
@@ -569,7 +552,7 @@ export const getAssetStats = async (req, res) => {
         }
       }
     ]);
-    
+
     res.status(200).json({
       success: true,
       data: {

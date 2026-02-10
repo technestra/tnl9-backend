@@ -342,9 +342,11 @@ export const getCompanyUsers = async (req, res) => {
   }
 };
 
+// companyController.js में
 export const getCompanyStats = async (req, res) => {
   try {
     let query = {};
+
     if (req.user.role === "ADMIN") {
       query.$or = [
         { "createdBy.userId": req.user.id },
@@ -356,13 +358,33 @@ export const getCompanyStats = async (req, res) => {
         { assignedUsers: req.user.id }
       ];
     }
-    const [total, active, inactive, trashCount] = await Promise.all([
+    // SUPER_ADMIN के लिए कोई filter नहीं (all companies)
+
+    console.log("📊 Stats query for user:", {
+      userId: req.user.id,
+      role: req.user.role,
+      query: query
+    });
+
+    // ✅ Correct countDocuments queries
+    const [total, active, inactive] = await Promise.all([
       Company.countDocuments(query),
       Company.countDocuments({ ...query, isActive: true }),
-      Company.countDocuments({ ...query, isActive: false }),
-      req.user.role === "SUPER_ADMIN" ?
-        Company.countDocuments({ isDeleted: true }) : 0
+      Company.countDocuments({ ...query, isActive: false })
     ]);
+
+    // ✅ Only SUPER_ADMIN can see trash count
+    let trashCount = 0;
+    if (req.user.role === "SUPER_ADMIN") {
+      trashCount = await Company.countDocuments({ isDeleted: true });
+    }
+
+    console.log("📊 Stats results:", {
+      total,
+      active,
+      inactive,
+      trashCount
+    });
 
     res.json({
       success: true,
@@ -374,9 +396,10 @@ export const getCompanyStats = async (req, res) => {
       }
     });
   } catch (error) {
+    console.error("[GET COMPANY STATS ERROR]:", error);
     res.status(500).json({
       success: false,
-      message: error.message
+      message: error.message || "Failed to get company stats"
     });
   }
 };
@@ -387,10 +410,10 @@ export const getCompanyStats = async (req, res) => {
 export const softDeleteCompany = async (req, res) => {
   try {
     const companyId = req.params.id;
-    
+
     // Find company with deleted records (include trashed)
     const company = await Company.findOneWithDeleted({ _id: companyId });
-    
+
     if (!company) {
       return res.status(404).json({
         success: false,
@@ -441,9 +464,9 @@ export const softDeleteCompany = async (req, res) => {
 export const getTrashCompanies = async (req, res) => {
   try {
     if (req.user.role !== "SUPER_ADMIN") {
-      return res.status(403).json({ 
-        success: false, 
-        message: "Access denied. Only Super Admin can view trash." 
+      return res.status(403).json({
+        success: false,
+        message: "Access denied. Only Super Admin can view trash."
       });
     }
 
@@ -460,56 +483,106 @@ export const getTrashCompanies = async (req, res) => {
     });
   } catch (error) {
     console.error("[GET TRASH ERROR]:", error);
-    res.status(500).json({ 
-      success: false, 
-      message: error.message 
+    res.status(500).json({
+      success: false,
+      message: error.message
     });
   }
 };
 
+// companyController.js में restoreCompany function को ये करें
 export const restoreCompany = async (req, res) => {
   try {
-    // Only Super Admin can restore
+    console.log("🔍 [RESTORE REQUEST START]");
+    console.log("Company ID:", req.params.id);
+    console.log("User ID:", req.user.id);
+    console.log("User Role:", req.user.role);
+
+    // Permission check
     if (req.user.role !== "SUPER_ADMIN") {
+      console.log("❌ [RESTORE] Permission denied - Not SUPER_ADMIN");
       return res.status(403).json({
         success: false,
         message: "Only Super Admin can restore companies"
       });
     }
 
-    // Find company including deleted ones
-    const company = await Company.findOneWithDeleted({ _id: req.params.id });
+    const companyId = req.params.id;
+
+    // DEBUG: पहले ये check करें कि company exists है या नहीं
+    console.log("🔍 [RESTORE] Looking for company with ID:", companyId);
+
+    // Option 1: Simple findById
+    const company = await Company.findById(companyId);
+
+    console.log("🔍 [RESTORE] Company found via findById:", {
+      found: !!company,
+      id: company?._id,
+      name: company?.companyName,
+      isDeleted: company?.isDeleted,
+      deletedAt: company?.deletedAt
+    });
 
     if (!company) {
+      console.log("❌ [RESTORE] Company not found with simple findById");
+
+      // Option 2: Try with withDeleted option
+      try {
+        const companyWithDeleted = await Company.findById(companyId, null, { withDeleted: true });
+        console.log("🔍 [RESTORE] Company found with withDeleted:", {
+          found: !!companyWithDeleted,
+          isDeleted: companyWithDeleted?.isDeleted
+        });
+      } catch (findError) {
+        console.log("❌ [RESTORE] Error finding with withDeleted:", findError.message);
+      }
+
       return res.status(404).json({
         success: false,
         message: "Company not found"
       });
     }
 
-    // Check if it's actually in trash
+    // Check if company is actually deleted
+    console.log("🔍 [RESTORE] Checking isDeleted status:", company.isDeleted);
+
     if (!company.isDeleted) {
+      console.log("⚠️ [RESTORE] Company is NOT deleted (isDeleted = false)");
       return res.status(400).json({
         success: false,
         message: "Company is not in trash"
       });
     }
 
-    // Use the plugin's restore method
-    await company.restore();
+    console.log("✅ [RESTORE] Company is deleted, proceeding to restore...");
 
-    console.log("[RESTORE] Success - ID:", req.params.id);
+    // SIMPLE RESTORE - Direct update
+    company.isDeleted = false;
+    company.deletedAt = null;
+    company.deletedBy = null;
+
+    await company.save();
+
+    console.log("✅ [RESTORE] Company restored successfully");
 
     res.json({
       success: true,
       message: "Company restored successfully",
-      data: company
+      data: {
+        _id: company._id,
+        companyName: company.companyName,
+        isDeleted: company.isDeleted
+      }
     });
+
   } catch (error) {
-    console.error("[RESTORE ERROR]:", error);
+    console.error("❌ [RESTORE ERROR]:", error);
+    console.error("❌ [RESTORE ERROR Stack]:", error.stack);
+
     res.status(500).json({
       success: false,
-      message: error.message || "Restore failed"
+      message: error.message || "Restore failed",
+      errorDetails: error.message
     });
   }
 };
@@ -578,7 +651,7 @@ export const emptyTrash = async (req, res) => {
 
     // Find all deleted companies
     const deletedCompanies = await Company.findDeleted({});
-    
+
     if (deletedCompanies.length === 0) {
       return res.json({
         success: true,
@@ -611,37 +684,3 @@ export const emptyTrash = async (req, res) => {
     });
   }
 };
-
-// Keep your original deleteCompany function for non-trash deletions
-// export const deleteCompany = async (req, res) => {
-//   try {
-//     if (req.user.role !== "SUPER_ADMIN") {
-//       return res.status(403).json({ 
-//         message: "Only Super Admin can delete" 
-//       });
-//     }
-
-//     const company = await Company.findById(req.params.id);
-//     if (!company) {
-//       return res.status(404).json({ 
-//         message: "Company not found" 
-//       });
-//     }
-
-//     // Remove company from users' companies array
-//     await User.updateMany(
-//       { companies: company._id },
-//       { $pull: { companies: company._id } }
-//     );
-
-//     await company.deleteOne();
-
-//     res.json({ 
-//       message: "Company deleted successfully" 
-//     });
-//   } catch (error) {
-//     res.status(500).json({ 
-//       message: error.message 
-//     });
-//   }
-// };
