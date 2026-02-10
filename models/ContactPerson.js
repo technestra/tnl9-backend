@@ -44,7 +44,7 @@ const contactPersonSchema = new mongoose.Schema(
       userName: {
         type: String,
       },
-      userEmail: { 
+      userEmail: {
         type: String,
       },
       role: {

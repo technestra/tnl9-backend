@@ -194,7 +194,6 @@ export const saveUploadedUrls = async (req, res) => {
   }
 };
 
-
 export const getDocumentStatus = async (req, res) => {
   try {
     const doc = await EmployeeDocument.findOne({ user: req.user.id });
@@ -202,9 +201,7 @@ export const getDocumentStatus = async (req, res) => {
     if (!doc) {
       return res.json({ documents: {} });
     }
-
     const status = {};
-
     Object.keys(doc.documents).forEach(field => {
       status[field] = {
         locked: doc.documents[field]?.locked ?? false,
@@ -220,7 +217,6 @@ export const getDocumentStatus = async (req, res) => {
     res.status(500).json({ message: "Failed to fetch document status" });
   }
 };
-
 
 export const unlockSingleDocument = async (req, res) => {
   try {

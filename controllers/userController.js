@@ -77,25 +77,11 @@ export const createUserByAdmin = async (req, res) => {
   }
 };
 
-// export const getMe = async (req, res) => {
-//   try {
-//     const user = await User.findById(req.user.id).select("-password");
-//     if (!user) {
-//       return res.status(404).json({ message: "User not found" });
-//     }
-//     res.json(user);
-//   } catch (err) {
-//     res.status(500).json({ message: err.message });
-//   }
-// };
 export const getMe = async (req, res) => {
   try {
     console.log("📊 getMe called for user ID:", req.user.id);
-    
-    // For SUPER_ADMIN
     if (req.user.role === "SUPER_ADMIN") {
       console.log("👑 Fetching SUPER_ADMIN data");
-      // Return SUPER_ADMIN data structure
       return res.json({
         _id: req.user.id,
         name: req.user.name,
@@ -107,17 +93,16 @@ export const getMe = async (req, res) => {
       });
     }
 
-    // For regular users (ADMIN/USER)
     console.log("👤 Fetching regular user data");
     const user = await User.findById(req.user.id)
       .select("-password")
       .populate("companies", "companyName");
-    
+
     if (!user) {
       console.log("❌ User not found in database");
-      return res.status(404).json({ 
+      return res.status(404).json({
         success: false,
-        message: "User not found" 
+        message: "User not found"
       });
     }
 
@@ -126,13 +111,12 @@ export const getMe = async (req, res) => {
 
   } catch (err) {
     console.error("❌ Error in getMe:", err);
-    res.status(500).json({ 
+    res.status(500).json({
       success: false,
-      message: err.message || "Server error in getMe" 
+      message: err.message || "Server error in getMe"
     });
   }
 };
-
 
 export const deactivateUser = async (req, res) => {
   try {
@@ -158,13 +142,10 @@ export const deactivateUser = async (req, res) => {
   }
 };
 
-
 export const getAllUsers = async (req, res) => {
   const users = await User.find().select("name email role isActive");
   res.json(users);
 };
-
-
 
 export const toggleUserStatus = async (req, res) => {
   try {
@@ -184,12 +165,3 @@ export const toggleUserStatus = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
-
-// export const deleteUser = async (req, res) => {
-//   try{
-//     const user = await User.findByIdAndDelete(req.param.id);
-//     if(!User){
-//       return res.status(404).json({ message: "User not found"});
-//     }
-//   }
-// }

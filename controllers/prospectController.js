@@ -311,83 +311,6 @@ export const deleteProspect = async (req, res) => {
   }
 };
 
-// export const searchProspects = async (req, res) => {
-//   try {
-//     const {
-//       search,
-//       company,
-//       createdByUserId,
-//       isActive,
-//       prospectStatus,
-//       prospectSource,
-//       page = 1,
-//       limit = 10
-//     } = req.query;
-
-//     let query = {};
-
-//     if (req.user.role !== "SUPER_ADMIN") {
-//       query["createdBy.userId"] = req.user.id;
-//     }
-//     if (search) {
-//       query.$or = [
-//         { prospectId: { $regex: search, $options: 'i' } },
-//         { "companySnapshot.companyName": { $regex: search, $options: 'i' } },
-//         { "suspectSnapshot.suspectName": { $regex: search, $options: 'i' } },
-//         { "contactSnapshots.name": { $regex: search, $options: 'i' } },
-//         { "contactSnapshots.email": { $regex: search, $options: 'i' } },
-//         { "contactSnapshots.phone": { $regex: search, $options: 'i' } },
-//         { requirement: { $regex: search, $options: 'i' } }
-//       ];
-//     }
-
-//     if (company) {
-//       query.company = company;
-//     }
-
-//     if (createdByUserId) {
-//       query["createdBy.userId"] = createdByUserId;
-//     }
-
-//     if (isActive !== undefined) {
-//       query.isActive = isActive === 'true';
-//     }
-
-//     if (prospectStatus) {
-//       query.prospectStatus = prospectStatus;
-//     }
-
-//     if (prospectSource) {
-//       query.prospectSource = prospectSource;
-//     }
-
-//     const skip = (page - 1) * limit;
-
-//     const prospects = await Prospect.find(query)
-//       .populate("company", "companyName")
-//       .skip(skip)
-//       .limit(parseInt(limit))
-//       .sort({ createdAt: -1 });
-
-//     const total = await Prospect.countDocuments(query);
-
-//     res.json({
-//       success: true,
-//       data: prospects,
-//       pagination: {
-//         total,
-//         page: parseInt(page),
-//         pages: Math.ceil(total / limit),
-//         limit: parseInt(limit)
-//       }
-//     });
-//   } catch (error) {
-//     res.status(500).json({
-//       success: false,
-//       message: error.message
-//     });
-//   }
-// };
 export const searchProspects = async (req, res) => {
   try {
     console.log("=== SEARCH PROSPECTS API CALLED ===");
@@ -407,14 +330,11 @@ export const searchProspects = async (req, res) => {
 
     let query = {};
 
-    // ✅ Role-based access - FIXED (Only check if not SUPER_ADMIN)
     if (req.user.role !== "SUPER_ADMIN") {
       query["createdBy.userId"] = req.user.id;
     }
 
-    // ✅ Search query - FIXED (Combine properly without overwriting)
     if (search && search.trim()) {
-      // Create search query object
       const searchQuery = {
         $or: [
           { prospectId: { $regex: search.trim(), $options: 'i' } },
@@ -423,8 +343,6 @@ export const searchProspects = async (req, res) => {
           { requirement: { $regex: search.trim(), $options: 'i' } }
         ]
       };
-
-      // If contactSnapshots exist in your model
       if (mongoose.model('Prospect').schema.path('contactSnapshots')) {
         searchQuery.$or.push(
           { "contactSnapshots.name": { $regex: search.trim(), $options: 'i' } },
@@ -433,7 +351,6 @@ export const searchProspects = async (req, res) => {
         );
       }
 
-      // Combine with existing query
       if (Object.keys(query).length > 0) {
         query = { $and: [query, searchQuery] };
       } else {
@@ -441,7 +358,6 @@ export const searchProspects = async (req, res) => {
       }
     }
 
-    // ✅ Other filters (unchanged)
     if (company) {
       query.company = company;
     }
@@ -462,24 +378,18 @@ export const searchProspects = async (req, res) => {
       query.prospectSource = prospectSource;
     }
 
-    // ✅ Pagination parsing - FIXED
     const pageNum = parseInt(page) || 1;
     const limitNum = parseInt(limit) || 10;
     const skip = (pageNum - 1) * limitNum;
 
     console.log("Final Query:", JSON.stringify(query, null, 2));
     console.log("Skip:", skip, "Limit:", limitNum);
-
-    // ✅ Query without populate first to test
     const prospects = await Prospect.find(query)
       .skip(skip)
       .limit(limitNum)
       .sort({ createdAt: -1 });
-
     const total = await Prospect.countDocuments(query);
-
     console.log("Found prospects:", prospects.length, "Total:", total);
-
     res.json({
       success: true,
       data: prospects,
@@ -494,35 +404,13 @@ export const searchProspects = async (req, res) => {
     console.error("=== SEARCH PROSPECTS ERROR ===");
     console.error("Error Message:", error.message);
     console.error("Error Stack:", error.stack);
-    
+
     res.status(500).json({
       success: false,
       message: error.message || "Internal server error"
     });
   }
 };
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 export const updateFollowup = async (req, res) => {
   try {
@@ -623,142 +511,129 @@ export const getFollowupHistory = async (req, res) => {
   }
 };
 
-
-
-
-
-
-
-// Soft delete company
 export const softDeleteProspect = async (req, res) => {
   try {
     const prospect = await Prospect.findById(req.params.id);
-    
+
     if (!prospect) {
-      return res.status(404).json({ 
+      return res.status(404).json({
         success: false,
-        message: "Prospect not found" 
+        message: "Prospect not found"
       });
     }
-
-    // Permission check
-    if (req.user.role !== "SUPER_ADMIN" && 
-        prospect.createdBy.userId.toString() !== req.user.id) {
-      return res.status(403).json({ 
+    if (req.user.role !== "SUPER_ADMIN" &&
+      prospect.createdBy.userId.toString() !== req.user.id) {
+      return res.status(403).json({
         success: false,
-        message: "No permission to delete this company" 
+        message: "No permission to delete this company"
       });
     }
 
     await prospect.softDelete(req.user.id);
-    
+
     res.json({
       success: true,
       message: "Prospect moved to trash"
     });
   } catch (error) {
-    res.status(500).json({ 
+    res.status(500).json({
       success: false,
-      message: error.message 
+      message: error.message
     });
   }
 };
 
-// Restore Prospect from trash
 export const restoreProspect = async (req, res) => {
   try {
     if (req.user.role !== "SUPER_ADMIN") {
-      return res.status(403).json({ 
+      return res.status(403).json({
         success: false,
-        message: "Only Super Admin can restore Prospects" 
+        message: "Only Super Admin can restore Prospects"
       });
     }
 
     const prospect = await Prospect.findById(req.params.id);
-    
+
     if (!prospect) {
-      return res.status(404).json({ 
+      return res.status(404).json({
         success: false,
-        message: "Prospect not found" 
+        message: "Prospect not found"
       });
     }
 
     await prospect.restore();
-    
+
     res.json({
       success: true,
       message: "Prospect restored successfully",
       prospect
     });
   } catch (error) {
-    res.status(500).json({ 
+    res.status(500).json({
       success: false,
-      message: error.message 
+      message: error.message
     });
   }
 };
 
-// Get trash Prospect
 export const getTrashProspect = async (req, res) => {
   try {
     if (req.user.role !== "SUPER_ADMIN") {
-      return res.status(403).json({ 
+      return res.status(403).json({
         success: false,
-        message: "Access denied" 
+        message: "Access denied"
       });
     }
 
     const prospects = await Prospect.findDeleted()
       .populate("deletedBy", "name email")
       .sort({ deletedAt: -1 });
-    
+
     res.json({
       success: true,
       data: prospect
     });
   } catch (error) {
-    res.status(500).json({ 
+    res.status(500).json({
       success: false,
-      message: error.message 
+      message: error.message
     });
   }
 };
 
-// Permanent delete
 export const permanentDeleteProspect = async (req, res) => {
   try {
     if (req.user.role !== "SUPER_ADMIN") {
-      return res.status(403).json({ 
+      return res.status(403).json({
         success: false,
-        message: "Only Super Admin can permanently delete" 
+        message: "Only Super Admin can permanently delete"
       });
     }
 
     const prospect = await Prospect.findById(req.params.id);
-    
+
     if (!prospect) {
-      return res.status(404).json({ 
+      return res.status(404).json({
         success: false,
-        message: "Prospect not found" 
+        message: "Prospect not found"
       });
     }
 
-    // Remove company from users' companies array
     await User.updateMany(
       { prospects: prospect._id },
       { $pull: { prospects: prospect._id } }
     );
 
     await prospect.deleteOne();
-    
+
     res.json({
       success: true,
       message: "Prospect permanently deleted"
     });
   } catch (error) {
-    res.status(500).json({ 
+    res.status(500).json({
       success: false,
-      message: error.message 
+      message: error.message
     });
   }
 };

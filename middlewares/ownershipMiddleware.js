@@ -4,7 +4,6 @@ export const checkOwnership = (modelName) => {
       let Model;
       let paramId = req.params.id || req.params.userId;
       
-      // Determine model
       switch(modelName) {
         case 'Company':
           Model = (await import('../models/Company.js')).default;
@@ -31,19 +30,16 @@ export const checkOwnership = (modelName) => {
         return res.status(404).json({ message: `${modelName} not found` });
       }
       
-      // SUPER_ADMIN has full access
       if (req.user.role === "SUPER_ADMIN") {
         req.document = document;
         return next();
       }
       
-      // Check if user created this document
       if (document.createdBy?.userId?.toString() === req.user.id.toString()) {
         req.document = document;
         return next();
       }
       
-      // For companies, check if user is assigned
       if (modelName === 'Company') {
         const isAssignedAdmin = document.assignedAdmins?.some(
           adminId => adminId.toString() === req.user.id.toString()
@@ -59,7 +55,6 @@ export const checkOwnership = (modelName) => {
         }
       }
       
-      // If none of the above, access denied
       return res.status(403).json({ 
         message: "You don't have permission to access this resource" 
       });

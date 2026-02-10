@@ -77,7 +77,6 @@ const employeeProfileSchema = new mongoose.Schema(
     skills: [String],
     internalRole: String,
 
-    /* ---------------- STATUTORY (ONE-TIME LOCKED) ---------------- */
     panNumber: String,
     panLocked: { type: Boolean, default: false },
 

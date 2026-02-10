@@ -24,11 +24,9 @@ router.get("/:id", protect, getProspectById);
 router.put("/:id", protect, checkOwnership('Prospect'), updateProspect);
 router.delete("/:id", protect, deleteProspect);
 
-// Add these routes
 router.put("/:id/followup", protect, updateFollowup);
 router.get("/:id/followup-history", protect, getFollowupHistory);
 
-// prospectRoutes.js me
 router.put("/:id/toggle-active", protect, toggleProspectActive)
 
 router.delete("/:id/soft", protect,checkOwnership('Prospect'), softDeleteProspect); // Soft delete

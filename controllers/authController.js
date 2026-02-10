@@ -6,17 +6,12 @@ import SuperAdmin from "../models/SuperAdmin.js";
 export const loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
-
-    // 1. पहले SUPER_ADMIN check करें
     let superAdmin = await SuperAdmin.findOne({ email, isActive: true });
-    
     if (superAdmin) {
-      // SuperAdmin password check
       const isMatch = await bcrypt.compare(password, superAdmin.password);
       if (!isMatch) {
         return res.status(401).json({ message: "Invalid credentials" });
       }
-
       const token = jwt.sign(
         { 
           id: superAdmin._id, 
@@ -25,7 +20,6 @@ export const loginUser = async (req, res) => {
         process.env.JWT_SECRET, 
         { expiresIn: "1d" }
       );
-
       return res.json({
         token,
         user: {
@@ -36,19 +30,14 @@ export const loginUser = async (req, res) => {
         }
       });
     }
-
-    // 2. अगर SuperAdmin नहीं है, तो User check करें
     let user = await User.findOne({ email, isActive: true });
-    
     if (!user) {
       return res.status(404).json({ message: "Invalid credentials" });
     }
-
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       return res.status(401).json({ message: "Invalid credentials" });
     }
-
     const token = jwt.sign(
       { 
         id: user._id, 

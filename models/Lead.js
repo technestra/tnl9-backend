@@ -5,7 +5,7 @@ const leadSchema = new mongoose.Schema(
   {
     leadId: {
       type: String,
-      unique: true 
+      unique: true
     },
 
     prospect: {
@@ -82,31 +82,39 @@ const leadSchema = new mongoose.Schema(
       }
     ],
 
-followUpHistory: [
-  {
-    date: { type: Date, required: true },
-    type: { 
-      type: String, 
-      enum: ["Last Followup", "Next Followup", "General"],
-      required: true 
+    followUpHistory: [
+      {
+        date: { type: Date, required: true },
+        type: {
+          type: String,
+          enum: ["Last Followup", "Next Followup", "General"],
+          required: true
+        },
+        comment: { type: String, required: true },
+        performedBy: {
+          userId: mongoose.Schema.Types.ObjectId,
+          userName: String,
+          userEmail: String,
+          role: String
+        },
+        performedAt: { type: Date, default: Date.now }
+      }
+    ],
+    lastFollowup: {
+      type: Date,
+      default: null
     },
-    comment: { type: String, required: true },
-    performedBy: {
-      userId: mongoose.Schema.Types.ObjectId,
-      userName: String,
-      userEmail: String,
-      role: String
+
+    nextFollowup: {
+      type: Date,
+      default: null
     },
-    performedAt: { type: Date, default: Date.now }
-  }
-],
-lastFollowupComment: String,
-nextFollowupComment: String,
-followupReminder: {
-  status: { type: String, enum: ["None", "Today", "1 Day", "2 Days", "Overdue"], default: "None" },
-  notifiedAt: Date
-},
-    followUpOwner: String,
+    lastFollowupComment: String,
+    nextFollowupComment: String,
+    followupReminder: {
+      status: { type: String, enum: ["None", "Today", "1 Day", "2 Days", "Overdue"], default: "None" },
+      notifiedAt: Date
+    },
 
     leadName: {
       type: String,
@@ -212,7 +220,7 @@ followupReminder: {
       userName: {
         type: String,
       },
-      userEmail: {   
+      userEmail: {
         type: String,
       },
       role: {

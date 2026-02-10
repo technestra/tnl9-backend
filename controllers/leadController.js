@@ -8,7 +8,7 @@ import SuperAdmin from "../models/SuperAdmin.js";
 export const createLead = async (req, res) => {
   try {
     const {
-      prospectId,
+      prospect,
       company,
       engagementType,
       pipelineType,
@@ -39,7 +39,6 @@ export const createLead = async (req, res) => {
       prospectStatus,
       lastFollowUp,
       nextFollowUp,
-      followUpOwner,
       proposalStatus,
       proposalVersion,
       negotiationNotes,
@@ -47,20 +46,17 @@ export const createLead = async (req, res) => {
       contactSnapshots = [],
       contactPersonIds = []
     } = req.body;
-
+    console.log("[CREATE LEAD REQUEST BODY]:", req.body);
     let userDetails = null;
     if (req.user.role === "SUPER_ADMIN") {
       userDetails = await SuperAdmin.findById(req.user.id).select("name email");
     } else {
       userDetails = await User.findById(req.user.id).select("name email");
     }
-
     if (!userDetails) {
       return res.status(404).json({ message: "User not found" });
     }
-
     let payload = {
-
       createdBy: {
         userId: req.user.id,
         userName: userDetails.name,
@@ -78,32 +74,49 @@ export const createLead = async (req, res) => {
     let prospectDoc = null;
     let companyDoc = null;
 
-    if (prospectId) {
-      prospectDoc = await Prospect.findById(prospectId)
+    if (prospect) {
+      console.log("[CONVERTING FROM PROSPECT] ID:", prospect);
+
+      prospectDoc = await Prospect.findById(prospect)
         .populate("company")
         .populate("suspect");
+
+      console.log("[PROSPECT DOCUMENT]:", prospectDoc);
 
       if (!prospectDoc) {
         return res.status(404).json({ message: "Prospect not found" });
       }
+
       if (
         req.user.role !== "SUPER_ADMIN" &&
-        prospectDoc.createdBy?.toString() !== req.user.id
+        prospectDoc.createdBy?.userId?.toString() !== req.user.id
       ) {
         return res.status(403).json({ message: "You can only convert your own prospects" });
       }
+
       if (prospectDoc.status === "WON") {
         return res.status(400).json({ message: "Prospect already converted to lead" });
       }
+
       companyDoc = prospectDoc.company;
 
+      if (!companyDoc) {
+        return res.status(400).json({ message: "Prospect does not have a company" });
+      }
       payload = {
         ...payload,
         prospect: prospectDoc._id,
         company: companyDoc._id,
         suspect: prospectDoc.suspect?._id,
-        leadName: leadName || `${companyDoc.companyName || "Unknown"} - ${prospectDoc.requirement || "No requirement"}`,
-        companySnapshot: prospectDoc.companySnapshot || {},
+        leadName: leadName || `${companyDoc.companyName || "Unknown"} - ${prospectDoc.requirement || "Lead"}`,
+        companySnapshot: {
+          companyName: companyDoc.companyName || "",
+          companyAddress: companyDoc.companyAddress || "",
+          companyLinkedIn: companyDoc.companyLinkedin || "",
+          companyWebsite: companyDoc.companyWebsite || "",
+          companyContact: companyDoc.coordinatorContactNumber || "",
+          companyEmail: companyDoc.companyEmail || ""
+        },
         contactSnapshots: prospectDoc.contactSnapshots || [],
         contactPersonIds: prospectDoc.contactPersonIds || [],
         prospectStatus: prospectDoc.prospectStatus,
@@ -111,14 +124,15 @@ export const createLead = async (req, res) => {
         requirement: prospectDoc.requirement || requirement,
         budget: prospectDoc.budget || budget,
         timeline: prospectDoc.timeline || timeline,
-        comments: prospectDoc.comments || (comments ? [{ text: comments }] : []),
+        comments: prospectDoc.comments ? [{ text: prospectDoc.comments.text }] : (comments ? [{ text: comments }] : []),
         convertedFromProspect: true
       };
-
       prospectDoc.status = "WON";
       await prospectDoc.save();
-    }
-    else {
+
+      console.log("[PROSPECT CONVERTED TO WON]");
+    } else {
+      console.log("[DIRECT LEAD CREATION]");
       if (!company) {
         return res.status(400).json({ message: "Company is required for direct lead creation" });
       }
@@ -132,7 +146,6 @@ export const createLead = async (req, res) => {
         ...payload,
         company: companyDoc._id,
         leadName: leadName || `${companyDoc.companyName || "Unknown"} - Lead`,
-
         companySnapshot: {
           companyName: companyDoc.companyName,
           companyAddress: companyDoc.companyAddress,
@@ -141,7 +154,6 @@ export const createLead = async (req, res) => {
           companyContact: companyDoc.coordinatorContactNumber,
           companyEmail: companyDoc.companyEmail
         },
-
         contactSnapshots,
         contactPersonIds,
         prospectStatus,
@@ -154,7 +166,6 @@ export const createLead = async (req, res) => {
     }
     payload = {
       ...payload,
-
       platform,
       projectCategory,
       domain,
@@ -171,15 +182,13 @@ export const createLead = async (req, res) => {
       contractDuration,
       location,
       interviewRounds,
-      lastFollowUp,
-      nextFollowUp,
-      followUpOwner,
+      lastFollowup: lastFollowUp,
+      nextFollowUp: nextFollowUp,
       proposalStatus,
       proposalVersion,
       negotiationNotes,
       clientFeedback
     };
-
     const enumFields = [
       "prospectStatus",
       "engagementModel",
@@ -194,18 +203,21 @@ export const createLead = async (req, res) => {
         delete payload[field];
       }
     });
-
     if (!payload.leadName?.trim()) {
       return res.status(400).json({ message: "Lead name is required" });
     }
+    console.log("[FINAL LEAD PAYLOAD]:", payload);
     const lead = await Lead.create(payload);
+
     res.status(201).json({
+      success: true,
       message: "Lead created successfully",
       lead
     });
   } catch (error) {
     console.error("[CREATE LEAD ERROR]:", error);
     res.status(500).json({
+      success: false,
       message: "Server error while creating lead",
       error: error.message
     });
@@ -251,33 +263,106 @@ export const getLeadById = async (req, res) => {
 
 export const updateLead = async (req, res) => {
   try {
-    const lead = await Lead.findById(req.params.id);
-    if (!lead) {
-      return res.status(404).json({ message: "Lead not found" });
-    }
-    const userId = req.user?.id?.toString();
-    const leadOwnerId = lead.createdBy?.toString();
+    console.log("=== UPDATE LEAD DEBUG ===");
+    console.log("Lead ID to update:", req.params.id);
+    console.log("Request body keys:", Object.keys(req.body));
+    console.log("Full request body:", JSON.stringify(req.body, null, 2));
 
-    if (req.user.role !== "SUPER_ADMIN" && userId !== leadOwnerId) {
-      return res.status(403).json({ message: "You can only edit your own leads" });
-    }
-    console.log("[UPDATE LEAD] Updating fields:", Object.keys(req.body));
+    const requiredFields = ['leadName', 'engagementType', 'pipelineType', 'company'];
+    const missingFields = [];
 
-    Object.keys(req.body).forEach(key => {
-      if (req.body[key] !== undefined && req.body[key] !== null) {
-        lead[key] = req.body[key];
+    requiredFields.forEach(field => {
+      if (!req.body[field]) {
+        missingFields.push(field);
       }
     });
-    await lead.save();
 
+    if (missingFields.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: `Missing required fields: ${missingFields.join(', ')}`
+      });
+    }
+    const lead = await Lead.findById(req.params.id);
+    if (!lead) {
+      return res.status(404).json({
+        success: false,
+        message: "Lead not found"
+      });
+    }
+    console.log("Found lead:", lead.leadId, lead.leadName);
+    const updateData = { ...req.body };
+    delete updateData._id;
+    delete updateData.leadId;
+    delete updateData.createdBy;
+    delete updateData.convertedFromProspect;
+    if (updateData.lastFollowUp !== undefined) {
+      updateData.lastFollowup = updateData.lastFollowUp || null;
+      delete updateData.lastFollowUp;
+    }
+
+    if (updateData.nextFollowUp !== undefined) {
+      updateData.nextFollowUp = updateData.nextFollowUp || null;
+    }
+    if (updateData.comments && typeof updateData.comments === 'string') {
+      if (updateData.comments.trim()) {
+        updateData.comments = [{ text: updateData.comments, createdAt: new Date() }];
+      } else {
+        delete updateData.comments;
+      }
+    }
+    console.log("Update data after processing:", updateData);
+    const updatedLead = await Lead.findByIdAndUpdate(
+      req.params.id,
+      updateData,
+      {
+        new: true,
+        runValidators: true,
+        context: 'query'
+      }
+    );
+
+    if (!updatedLead) {
+      return res.status(404).json({
+        success: false,
+        message: "Lead not found after update"
+      });
+    }
+    console.log("Update successful!");
     res.json({
+      success: true,
       message: "Lead updated successfully",
-      lead
+      lead: updatedLead
     });
+
   } catch (error) {
-    console.error("[UPDATE LEAD ERROR]:", error);
+    console.error("=== UPDATE ERROR DETAILS ===");
+    console.error("Error name:", error.name);
+    console.error("Error message:", error.message);
+
+    if (error.name === 'ValidationError') {
+      const errors = {};
+      Object.keys(error.errors).forEach(key => {
+        errors[key] = error.errors[key].message;
+      });
+
+      return res.status(400).json({
+        success: false,
+        message: "Validation error",
+        errors: errors
+      });
+    }
+
+    if (error.name === 'CastError') {
+      return res.status(400).json({
+        success: false,
+        message: `Invalid value for field ${error.path}: ${error.value}`
+      });
+    }
+
     res.status(500).json({
-      message: "Error updating lead",
+      success: false,
+      message: "Internal server error",
       error: error.message
     });
   }
@@ -357,91 +442,6 @@ export const toggleLeadActive = async (req, res) => {
   }
 };
 
-// export const searchLeads = async (req, res) => {
-//   try {
-//     const {
-//       search,
-//       company,
-//       createdByUserId,
-//       isActive,
-//       stage,
-//       engagementType,
-//       pipelineType,
-//       page = 1,
-//       limit = 10
-//     } = req.query;
-
-//     let query = {};
-
-//     if (req.user.role !== "SUPER_ADMIN") {
-//       query["createdBy.userId"] = req.user.id;
-//     }
-
-//     if (search) {
-//       query.$or = [
-//         { leadId: { $regex: search, $options: 'i' } },
-//         { leadName: { $regex: search, $options: 'i' } },
-//         { "companySnapshot.companyName": { $regex: search, $options: 'i' } },
-//         { "contactSnapshots.name": { $regex: search, $options: 'i' } },
-//         { "contactSnapshots.email": { $regex: search, $options: 'i' } },
-//         { "contactSnapshots.phone": { $regex: search, $options: 'i' } },
-//         { requirement: { $regex: search, $options: 'i' } },
-//         { domain: { $regex: search, $options: 'i' } },
-//         { jobTitle: { $regex: search, $options: 'i' } }
-//       ];
-//     }
-
-//     if (company) {
-//       query.company = company;
-//     }
-
-//     if (createdByUserId) {
-//       query["createdBy.userId"] = createdByUserId;
-//     }
-
-//     if (isActive !== undefined) {
-//       query.isActive = isActive === 'true';
-//     }
-
-//     if (stage) {
-//       query.stage = stage;
-//     }
-
-//     if (engagementType) {
-//       query.engagementType = engagementType;
-//     }
-
-//     if (pipelineType) {
-//       query.pipelineType = pipelineType;
-//     }
-
-//     const skip = (page - 1) * limit;
-
-//     const leads = await Lead.find(query)
-//       .populate("company", "companyName")
-//       .skip(skip)
-//       .limit(parseInt(limit))
-//       .sort({ createdAt: -1 });
-
-//     const total = await Lead.countDocuments(query);
-
-//     res.json({
-//       success: true,
-//       data: leads,
-//       pagination: {
-//         total,
-//         page: parseInt(page),
-//         pages: Math.ceil(total / limit),
-//         limit: parseInt(limit)
-//       }
-//     });
-//   } catch (error) {
-//     res.status(500).json({
-//       success: false,
-//       message: error.message
-//     });
-//   }
-// };
 export const searchLeads = async (req, res) => {
   try {
     console.log("=== SEARCH LEADS API CALLED ===");
@@ -461,13 +461,9 @@ export const searchLeads = async (req, res) => {
     } = req.query;
 
     let query = {};
-
-    // ✅ Role-based access - FIXED
     if (req.user.role !== "SUPER_ADMIN") {
       query["createdBy.userId"] = req.user.id;
     }
-
-    // ✅ Search query - FIXED (Combine properly)
     if (search && search.trim()) {
       const searchQuery = {
         $or: [
@@ -479,8 +475,6 @@ export const searchLeads = async (req, res) => {
           { jobTitle: { $regex: search.trim(), $options: 'i' } }
         ]
       };
-
-      // If contactSnapshots exist
       if (mongoose.model('Lead').schema.path('contactSnapshots')) {
         searchQuery.$or.push(
           { "contactSnapshots.name": { $regex: search.trim(), $options: 'i' } },
@@ -488,41 +482,30 @@ export const searchLeads = async (req, res) => {
           { "contactSnapshots.phone": { $regex: search.trim(), $options: 'i' } }
         );
       }
-
-      // Combine with existing query
       if (Object.keys(query).length > 0) {
         query = { $and: [query, searchQuery] };
       } else {
         query = searchQuery;
       }
     }
-
-    // ✅ Other filters
     if (company) {
       query.company = company;
     }
-
     if (createdByUserId) {
       query["createdBy.userId"] = createdByUserId;
     }
-
     if (isActive !== undefined && isActive !== 'all') {
       query.isActive = isActive === 'true' || isActive === true;
     }
-
     if (stage) {
       query.stage = stage;
     }
-
     if (engagementType) {
       query.engagementType = engagementType;
     }
-
     if (pipelineType) {
       query.pipelineType = pipelineType;
     }
-
-    // ✅ Pagination parsing - FIXED
     const pageNum = parseInt(page) || 1;
     const limitNum = parseInt(limit) || 10;
     const skip = (pageNum - 1) * limitNum;
@@ -554,15 +537,13 @@ export const searchLeads = async (req, res) => {
     console.error("=== SEARCH LEADS ERROR ===");
     console.error("Error Message:", error.message);
     console.error("Error Stack:", error.stack);
-    
+
     res.status(500).json({
       success: false,
       message: error.message || "Internal server error"
     });
   }
 };
-
-
 
 export const updateFollowup = async (req, res) => {
   try {
@@ -663,138 +644,128 @@ export const getFollowupHistory = async (req, res) => {
   }
 };
 
-
-
-// Soft delete company
 export const softDeleteLead = async (req, res) => {
   try {
     const lead = await Lead.findById(req.params.id);
-    
+
     if (!lead) {
-      return res.status(404).json({ 
+      return res.status(404).json({
         success: false,
-        message: "Lead not found" 
+        message: "Lead not found"
       });
     }
-
-    // Permission check
-    if (req.user.role !== "SUPER_ADMIN" && 
-        lead.createdBy.userId.toString() !== req.user.id) {
-      return res.status(403).json({ 
+    if (req.user.role !== "SUPER_ADMIN" &&
+      lead.createdBy.userId.toString() !== req.user.id) {
+      return res.status(403).json({
         success: false,
-        message: "No permission to delete this company" 
+        message: "No permission to delete this company"
       });
     }
-
     await lead.softDelete(req.user.id);
-    
+
     res.json({
       success: true,
       message: "Lead moved to trash"
     });
   } catch (error) {
-    res.status(500).json({ 
+    res.status(500).json({
       success: false,
-      message: error.message 
+      message: error.message
     });
   }
 };
 
-// Restore company from trash
 export const restoreLead = async (req, res) => {
   try {
     if (req.user.role !== "SUPER_ADMIN") {
-      return res.status(403).json({ 
+      return res.status(403).json({
         success: false,
-        message: "Only Super Admin can restore Lead" 
+        message: "Only Super Admin can restore Lead"
       });
     }
 
     const lead = await Lead.findById(req.params.id);
-    
+
     if (!lead) {
-      return res.status(404).json({ 
+      return res.status(404).json({
         success: false,
-        message: "Lead not found" 
+        message: "Lead not found"
       });
     }
 
     await lead.restore();
-    
+
     res.json({
       success: true,
       message: "Lead restored successfully",
       lead
     });
   } catch (error) {
-    res.status(500).json({ 
+    res.status(500).json({
       success: false,
-      message: error.message 
+      message: error.message
     });
   }
 };
 
-// Get trash Lead
 export const getTrashLead = async (req, res) => {
   try {
     if (req.user.role !== "SUPER_ADMIN") {
-      return res.status(403).json({ 
+      return res.status(403).json({
         success: false,
-        message: "Access denied" 
+        message: "Access denied"
       });
     }
 
     const leads = await Lead.findDeleted()
       .populate("deletedBy", "name email")
       .sort({ deletedAt: -1 });
-    
+
     res.json({
       success: true,
       data: lead
     });
   } catch (error) {
-    res.status(500).json({ 
+    res.status(500).json({
       success: false,
-      message: error.message 
+      message: error.message
     });
   }
 };
 
-// Permanent delete
 export const permanentDeleteLead = async (req, res) => {
   try {
     if (req.user.role !== "SUPER_ADMIN") {
-      return res.status(403).json({ 
+      return res.status(403).json({
         success: false,
-        message: "Only Super Admin can permanently delete" 
+        message: "Only Super Admin can permanently delete"
       });
     }
 
     const lead = await Lead.findById(req.params.id);
-    
+
     if (!lead) {
-      return res.status(404).json({ 
+      return res.status(404).json({
         success: false,
-        message: "Lead not found" 
+        message: "Lead not found"
       });
     }
 
-    // Remove lead from users' companies array
     await User.updateMany(
       { leads: lead._id },
       { $pull: { leads: lead._id } }
     );
 
     await lead.deleteOne();
-    
+
     res.json({
       success: true,
       message: "Lead permanently deleted"
     });
   } catch (error) {
-    res.status(500).json({ 
+    res.status(500).json({
       success: false,
-      message: error.message 
+      message: error.message
     });
   }
 };

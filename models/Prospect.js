@@ -22,7 +22,7 @@ const prospectSchema = new mongoose.Schema(
     },
 
     companySnapshot: {
-      companyName: { type: String, required: true },
+      companyName: { type: String },
       companyLinkedIn: String,
       companyWebsite: String,
       companyLocation: String,
@@ -75,6 +75,7 @@ const prospectSchema = new mongoose.Schema(
     budget: String,
     timeline: String,
 
+
     comments:
     {
       text: String,
@@ -103,6 +104,15 @@ const prospectSchema = new mongoose.Schema(
         performedAt: { type: Date, default: Date.now }
       }
     ],
+    lastFollowup: {
+      type: Date,
+      default: null
+    },
+
+    nextFollowUp: {
+      type: Date,
+      default: null
+    },
     lastFollowupComment: String,
     nextFollowupComment: String,
     followupReminder: {

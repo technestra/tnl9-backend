@@ -235,116 +235,6 @@ export const getSuspectById = async (req, res) => {
   }
 };
 
-// export const searchSuspects = async (req, res) => {
-//   try {
-//     const {
-//       search,
-//       company,
-//       createdByUserId,
-//       isActive,
-//       status,
-//       page = 1,
-//       limit = 10
-//     } = req.query;
-
-//     let query = {};
-
-//     // Current (only SUPER_ADMIN check):
-//     if (req.user.role !== "SUPER_ADMIN") {
-//       query["createdBy.userId"] = req.user.id;
-//     }
-
-//     // Companies pattern ke hisaab se hoga:
-//     if (req.user.role === "SUPER_ADMIN") {
-//       // No restriction
-//     } else if (req.user.role === "ADMIN") {
-//       query.$or = [
-//         { "createdBy.userId": req.user.id },
-//         { assignedAdmins: req.user.id } // Suspect model me assignedAdmins/Users field hai?
-//       ];
-//     } else {
-//       query.$or = [
-//         { "createdBy.userId": req.user.id },
-//         { assignedUsers: req.user.id }
-//       ];
-//     }
-
-//     // if (search) {
-//     //   query.$or = [
-//         // { suspectId: { $regex: search, $options: 'i' } },
-//         // { "companySnapshot.companyName": { $regex: search, $options: 'i' } },
-//         // { "contactSnapshots.name": { $regex: search, $options: 'i' } },
-//         // { "contactSnapshots.email": { $regex: search, $options: 'i' } },
-//         // { "contactSnapshots.phone": { $regex: search, $options: 'i' } }
-//     //   ];
-//     // }
-//     // Companies pattern jaise karna hoga:
-// if (search && search.trim()) {
-//   const searchQuery = {
-//     $or: [ 
-//         { suspectId: { $regex: search, $options: 'i' } },
-//         { "companySnapshot.companyName": { $regex: search, $options: 'i' } },
-//         { "contactSnapshots.name": { $regex: search, $options: 'i' } },
-//         { "contactSnapshots.email": { $regex: search, $options: 'i' } },
-//         { "contactSnapshots.phone": { $regex: search, $options: 'i' } }
-//      ]
-//   };
-  
-//   if (query.$or) {
-//     query = { 
-//       $and: [
-//         { $or: query.$or },
-//         searchQuery
-//       ] 
-//     };
-//   } else {
-//     query = searchQuery;
-//   }
-// }
-
-//     if (company) {
-//       query.company = company;
-//     }
-
-//     if (createdByUserId) {
-//       query["createdBy.userId"] = createdByUserId;
-//     }
-
-//     if (isActive !== undefined) {
-//       query.isActive = isActive === 'true';
-//     }
-
-//     if (status) {
-//       query.status = status;
-//     }
-
-//     const skip = (page - 1) * limit;
-
-//     const suspects = await Suspect.find(query)
-//       .populate("company", "companyName")
-//       .skip(skip)
-//       .limit(parseInt(limit))
-//       .sort({ createdAt: -1 });
-
-//     const total = await Suspect.countDocuments(query);
-
-//     res.json({
-//       success: true,
-//       data: suspects,
-//       pagination: {
-//         total,
-//         page: parseInt(page),
-//         pages: Math.ceil(total / limit),
-//         limit: parseInt(limit)
-//       }
-//     });
-//   } catch (error) {
-//     res.status(500).json({
-//       success: false,
-//       message: error.message
-//     });
-//   }
-// };
 export const searchSuspects = async (req, res) => {
   try {
     console.log("=== SEARCH SUSPECTS API CALLED ===");
@@ -362,25 +252,18 @@ export const searchSuspects = async (req, res) => {
     } = req.query;
 
     let query = {};
-
-    // ✅ YE ADD KARNA HAI - Companies wala pattern
-    // Role-based access
     if (req.user.role === "SUPER_ADMIN") {
-      // No restriction for super admin
     } else if (req.user.role === "ADMIN") {
       query.$or = [
         { "createdBy.userId": req.user.id },
-        { assignedAdmins: req.user.id } // Suspect model me ye field add karna padega
+        { assignedAdmins: req.user.id }
       ];
     } else {
       query.$or = [
         { "createdBy.userId": req.user.id },
-        { assignedUsers: req.user.id } // Suspect model me ye field add karna padega
+        { assignedUsers: req.user.id }
       ];
     }
-
-    // ✅ YE CHANGE KARNA HAI - Search query combine karo
-    // Search filter
     if (search && search.trim()) {
       const searchQuery = {
         $or: [
@@ -391,21 +274,18 @@ export const searchSuspects = async (req, res) => {
           { "contactSnapshots.phone": { $regex: search.trim(), $options: 'i' } }
         ]
       };
-
-      // Combine with existing query (Companies pattern)
       if (query.$or) {
-        query = { 
+        query = {
           $and: [
             { $or: query.$or },
             searchQuery
-          ] 
+          ]
         };
       } else {
         query = searchQuery;
       }
     }
 
-    // ✅ YE RAKHNA HAI (same)
     if (company) {
       query.company = company;
     }
@@ -422,7 +302,6 @@ export const searchSuspects = async (req, res) => {
       query.status = status;
     }
 
-    // ✅ YE ADD KARNA HAI - Pagination parsing
     const pageNum = parseInt(page);
     const limitNum = parseInt(limit);
     const skip = (pageNum - 1) * limitNum;
@@ -454,7 +333,7 @@ export const searchSuspects = async (req, res) => {
     console.error("=== SEARCH SUSPECTS ERROR ===");
     console.error("Error Message:", error.message);
     console.error("Error Stack:", error.stack);
-    
+
     res.status(500).json({
       success: false,
       message: error.message,
@@ -561,11 +440,6 @@ export const getFollowupHistory = async (req, res) => {
   }
 };
 
-
-
-
-
-// Soft delete company
 export const softDeleteSuspect = async (req, res) => {
   try {
     const suspect = await Suspect.findById(req.params.id);
@@ -577,7 +451,6 @@ export const softDeleteSuspect = async (req, res) => {
       });
     }
 
-    // Permission check
     if (req.user.role !== "SUPER_ADMIN" &&
       suspect.createdBy.userId.toString() !== req.user.id) {
       return res.status(403).json({
@@ -600,7 +473,6 @@ export const softDeleteSuspect = async (req, res) => {
   }
 };
 
-// Restore Suspect from trash
 export const restoreSuspect = async (req, res) => {
   try {
     if (req.user.role !== "SUPER_ADMIN") {
@@ -634,7 +506,6 @@ export const restoreSuspect = async (req, res) => {
   }
 };
 
-// Get trash Suspect
 export const getTrashSuspect = async (req, res) => {
   try {
     if (req.user.role !== "SUPER_ADMIN") {

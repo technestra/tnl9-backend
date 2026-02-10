@@ -1,6 +1,5 @@
 import ContactPerson from "../models/ContactPerson.js";
 import Company from "../models/Company.js";
-// Import required models at top
 import User from "../models/User.js";
 import SuperAdmin from "../models/SuperAdmin.js";
 
@@ -10,18 +9,15 @@ export const createContact = async (req, res) => {
     if (!company) {
       return res.status(404).json({ message: "Company not found" });
     }
-
     let userDetails = null;
     if (req.user.role === "SUPER_ADMIN") {
       userDetails = await SuperAdmin.findById(req.user.id).select("name email");
     } else {
       userDetails = await User.findById(req.user.id).select("name email");
     }
-
     if (!userDetails) {
       return res.status(404).json({ message: "User not found" });
     }
-
     const contact = await ContactPerson.create({
       ...req.body,
       companySnapshot: {
@@ -46,6 +42,10 @@ export const createContact = async (req, res) => {
 
 export const searchContacts = async (req, res) => {
   try {
+    console.log("=== SEARCH CONTACTS API CALLED ===");
+    console.log("User:", req.user.id, req.user.role);
+    console.log("Query params:", req.query);
+
     const {
       search,
       company,
@@ -56,57 +56,68 @@ export const searchContacts = async (req, res) => {
     } = req.query;
 
     let query = {};
-
     if (req.user.role !== "SUPER_ADMIN") {
       query["createdBy.userId"] = req.user.id;
     }
-
-    if (search) {
+    if (search && search.trim()) {
       query.$or = [
-        { name: { $regex: search, $options: 'i' } },
-        { email: { $regex: search, $options: 'i' } },
-        { phone: { $regex: search, $options: 'i' } },
-        { designation: { $regex: search, $options: 'i' } },
-        { "companySnapshot.companyName": { $regex: search, $options: 'i' } }
+        { name: { $regex: search.trim(), $options: 'i' } },
+        { email: { $regex: search.trim(), $options: 'i' } },
+        { phone: { $regex: search.trim(), $options: 'i' } },
+        { designation: { $regex: search.trim(), $options: 'i' } },
+        { professionalEmail: { $regex: search.trim(), $options: 'i' } },
+        { "companySnapshot.companyName": { $regex: search.trim(), $options: 'i' } }
       ];
     }
 
-    if (company) {
+    if (company && company.trim()) {
       query.company = company;
     }
-
-    if (createdByUserId) {
+    if (createdByUserId && createdByUserId.trim()) {
       query["createdBy.userId"] = createdByUserId;
     }
-
-    if (isActive !== undefined) {
-      query.isActive = isActive === 'true';
+    if (isActive !== undefined && isActive !== 'all' && isActive !== '') {
+      if (isActive === 'true' || isActive === 'false') {
+        query.isActive = isActive === 'true';
+      } else if (isActive === 'active') {
+        query.isActive = true;
+      } else if (isActive === 'inactive') {
+        query.isActive = false;
+      }
     }
 
-    const skip = (page - 1) * limit;
+    console.log("Final Query:", JSON.stringify(query, null, 2));
+    const pageNum = parseInt(page) || 1;
+    const limitNum = parseInt(limit) || 10;
+    const skip = (pageNum - 1) * limitNum;
 
     const contacts = await ContactPerson.find(query)
       .populate("company", "companyName")
       .skip(skip)
-      .limit(parseInt(limit))
+      .limit(limitNum)
       .sort({ createdAt: -1 });
 
     const total = await ContactPerson.countDocuments(query);
+
+    console.log("Found contacts:", contacts.length, "Total:", total);
 
     res.json({
       success: true,
       data: contacts,
       pagination: {
         total,
-        page: parseInt(page),
-        pages: Math.ceil(total / limit),
-        limit: parseInt(limit)
+        page: pageNum,
+        pages: Math.ceil(total / limitNum),
+        limit: limitNum
       }
     });
   } catch (error) {
+    console.error("=== SEARCH CONTACTS ERROR ===");
+    console.error("Error:", error.message);
+
     res.status(500).json({
       success: false,
-      message: error.message
+      message: error.message || "Internal server error"
     });
   }
 };
@@ -173,26 +184,22 @@ export const getContacts = async (req, res) => {
   }
 };
 
-
 export const updateContact = async (req, res) => {
   const contact = await ContactPerson.findById(req.params.id);
   if (!contact) {
     return res.status(404).json({ message: "Contact not found" });
   }
-
   if (
     req.user.role !== "SUPER_ADMIN" &&
     contact.createdBy.userId !== req.user.id
   ) {
     return res.status(403).json({ message: "Not allowed" });
   }
-
   Object.assign(contact, req.body);
   await contact.save();
 
   res.json(contact);
 };
-
 
 export const deleteContact = async (req, res) => {
   const contact = await ContactPerson.findById(req.params.id);
@@ -212,159 +219,171 @@ export const deleteContact = async (req, res) => {
 };
 
 export const toggleContactActive = async (req, res) => {
-  if (req.user.role !== "SUPER_ADMIN") {
-    return res.status(403).json({ message: "Only Super Admin allowed" });
+  try {
+    console.log("=== TOGGLE CONTACT ACTIVE DEBUG ===");
+    console.log("Request User:", {
+      id: req.user.id,
+      role: req.user.role,
+      fullUser: req.user
+    });
+    console.log("Contact ID:", req.params.id);
+    console.log("Checking role:", req.user.role === "SUPER_ADMIN");
+    if (req.user.role !== "SUPER_ADMIN") {
+      console.log("FAIL: User is not SUPER_ADMIN");
+      return res.status(403).json({
+        success: false,
+        message: "Only Super Admin can toggle active status",
+        userRole: req.user.role
+      });
+    }
+    const contact = await ContactPerson.findById(req.params.id);
+    if (!contact) {
+      console.log("Contact not found");
+      return res.status(404).json({
+        success: false,
+        message: "Contact not found"
+      });
+    }
+    console.log("Current status:", contact.isActive);
+    contact.isActive = !contact.isActive;
+    await contact.save();
+
+    console.log("New status:", contact.isActive);
+    res.json({
+      success: true,
+      message: `Contact ${contact.isActive ? "activated" : "deactivated"} successfully`,
+      isActive: contact.isActive,
+      contact: {
+        _id: contact._id,
+        name: contact.name,
+        isActive: contact.isActive
+      }
+    });
+  } catch (error) {
+    console.error("Toggle error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+      error: error.message
+    });
   }
-
-  const contact = await ContactPerson.findById(req.params.id);
-  if (!contact) {
-    return res.status(404).json({ message: "Contact not found" });
-  }
-
-  contact.isActive = !contact.isActive;
-  await contact.save();
-
-  res.json({
-    message: `Contact ${contact.isActive ? "Activated" : "Deactivated"}`,
-    isActive: contact.isActive
-  });
 };
-
-
-
-
-
-
 // Soft delete company
 export const softDeleteContactPerson = async (req, res) => {
   try {
     const contactPerson = await ContactPerson.findById(req.params.id);
-    
+
     if (!contactPerson) {
-      return res.status(404).json({ 
+      return res.status(404).json({
         success: false,
-        message: "Contact Person not found" 
+        message: "Contact Person not found"
       });
     }
-
-    // Permission check
-    if (req.user.role !== "SUPER_ADMIN" && 
-        contactPerson.createdBy.userId.toString() !== req.user.id) {
-      return res.status(403).json({ 
+    if (req.user.role !== "SUPER_ADMIN" &&
+      contactPerson.createdBy.userId.toString() !== req.user.id) {
+      return res.status(403).json({
         success: false,
-        message: "No permission to delete this Contact Person" 
+        message: "No permission to delete this Contact Person"
       });
     }
-
     await contactPerson.softDelete(req.user.id);
-    
     res.json({
       success: true,
       message: "Contact Person moved to trash"
     });
   } catch (error) {
-    res.status(500).json({ 
+    res.status(500).json({
       success: false,
-      message: error.message 
+      message: error.message
     });
   }
 };
 
-// Restore company from trash
 export const restoreContactPerson = async (req, res) => {
   try {
     if (req.user.role !== "SUPER_ADMIN") {
-      return res.status(403).json({ 
+      return res.status(403).json({
         success: false,
-        message: "Only Super Admin can restore Contact Person" 
+        message: "Only Super Admin can restore Contact Person"
       });
     }
 
     const contactPerson = await ContactPerson.findById(req.params.id);
-    
+
     if (!contactPerson) {
-      return res.status(404).json({ 
+      return res.status(404).json({
         success: false,
-        message: "Contact Person not found" 
+        message: "Contact Person not found"
       });
     }
-
     await contactPerson.restore();
-    
     res.json({
       success: true,
       message: "Contact Person restored successfully",
       contactPerson
     });
   } catch (error) {
-    res.status(500).json({ 
+    res.status(500).json({
       success: false,
-      message: error.message 
+      message: error.message
     });
   }
 };
 
-// Get trash ContactPerson
 export const getTrashContactPerson = async (req, res) => {
   try {
     if (req.user.role !== "SUPER_ADMIN") {
-      return res.status(403).json({ 
+      return res.status(403).json({
         success: false,
-        message: "Access denied" 
+        message: "Access denied"
       });
     }
-
     const contactPerson = await ContactPerson.findDeleted()
       .populate("deletedBy", "name email")
       .sort({ deletedAt: -1 });
-    
     res.json({
       success: true,
       data: contactPerson
     });
   } catch (error) {
-    res.status(500).json({ 
+    res.status(500).json({
       success: false,
-      message: error.message 
+      message: error.message
     });
   }
 };
 
-// Permanent delete
 export const permanentDeleteContactPerson = async (req, res) => {
   try {
     if (req.user.role !== "SUPER_ADMIN") {
-      return res.status(403).json({ 
+      return res.status(403).json({
         success: false,
-        message: "Only Super Admin can permanently delete" 
+        message: "Only Super Admin can permanently delete"
       });
     }
-
     const contactPerson = await Company.findById(req.params.id);
-    
+
     if (!contactPerson) {
-      return res.status(404).json({ 
+      return res.status(404).json({
         success: false,
-        message: "Contact Person not found" 
+        message: "Contact Person not found"
       });
     }
-
-    // Remove company from users' companies array
     await User.updateMany(
       { contactPerson: contactPerson._id },
       { $pull: { contactPersons: contactPerson._id } }
     );
 
     await contactPerson.deleteOne();
-    
+
     res.json({
       success: true,
       message: "ContactPerson permanently deleted"
     });
   } catch (error) {
-    res.status(500).json({ 
+    res.status(500).json({
       success: false,
-      message: error.message 
+      message: error.message
     });
   }
 };

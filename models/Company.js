@@ -63,7 +63,7 @@ const companySchema = new mongoose.Schema(
 
     resourceFromMarket: {
       type: Boolean,
-      required: true
+      // required: true
     },
     companyCountry: {
       type: String
@@ -110,7 +110,7 @@ const companySchema = new mongoose.Schema(
 
 companySchema.pre("save", async function () {
   if (!this.companyId) {
-    this.companyId = uuidv4(); // e.g., "550e8400-e29b-41d4-a716-446655440000"
+    this.companyId = uuidv4(); 
   }
 });
 

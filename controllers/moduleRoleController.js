@@ -4,20 +4,16 @@ import SuperAdmin from "../models/SuperAdmin.js";
 export const assignModuleRole = async (req, res) => {
   try {
     const { userId, module, moduleRole, permissions } = req.body;
-
     if (req.user.role !== "SUPER_ADMIN") {
       return res.status(403).json({ message: "Only Super Admin can assign module roles" });
     }
-
     const user = await User.findById(userId);
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
-
     user.moduleRoles = user.moduleRoles.filter(
       role => role.module !== module
     );
-
     user.moduleRoles.push({
       module,
       moduleRole,
@@ -28,14 +24,11 @@ export const assignModuleRole = async (req, res) => {
       assignedBy: req.user.id,
       assignedAt: new Date()
     });
-
     user.accessibleModules = [...new Set([
       ...(user.accessibleModules || []),
       module
     ])];
-
     await user.save();
-
     res.json({
       message: `Module role assigned successfully`,
       user: {
@@ -70,9 +63,7 @@ export const removeModuleRole = async (req, res) => {
     user.accessibleModules = (user.accessibleModules || []).filter(
       m => m !== module
     );
-
     await user.save();
-
     res.json({
       message: `Module role removed successfully`,
       user: {
@@ -91,9 +82,7 @@ export const getAllUsersWithModuleRoles = async (req, res) => {
     if (req.user.role !== "SUPER_ADMIN") {
       return res.status(403).json({ message: "Access denied" });
     }
-
     const users = await User.find().select("-password");
-
     res.json({
       users: users.map(user => ({
         id: user._id,
@@ -115,12 +104,9 @@ export const getModulePermissionsSummary = async (req, res) => {
     if (req.user.role !== "SUPER_ADMIN") {
       return res.status(403).json({ message: "Access denied" });
     }
-
     const users = await User.find().select("name email role moduleRoles accessibleModules");
-
     const modules = ["finance", "sales", "vendor", "companyDeck", "resource"];
     const summary = {};
-
     modules.forEach(module => {
       summary[module] = {
         totalAssigned: 0,

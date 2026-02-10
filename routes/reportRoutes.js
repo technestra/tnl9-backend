@@ -4,7 +4,6 @@ import { getMonthlyReport, monthlyReport, exportMonthlyReport } from "../control
 
 const router = express.Router();
 
-// router.get("/monthly", protect, monthlyReport);
 router.get("/monthly/export", protect, exportMonthlyReport);
 
 router.get("/monthly", protect, getMonthlyReport);
