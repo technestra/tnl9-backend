@@ -64,9 +64,6 @@ export const getAllAssets = async (req, res) => {
   }
 };
 
-// @desc    Move asset to trash (soft delete)
-// @route   DELETE /api/assets/:id
-// @access  Private (Admin only)
 export const trashAsset = async (req, res) => {
   const session = await mongoose.startSession();
   session.startTransaction();
@@ -74,7 +71,6 @@ export const trashAsset = async (req, res) => {
   try {
     const { id } = req.params;
 
-    // Validate ID
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({
         success: false,
@@ -152,9 +148,6 @@ export const trashAsset = async (req, res) => {
   }
 };
 
-// @desc    Restore asset from trash
-// @route   PATCH /api/assets/:id/restore
-// @access  Private (Admin only)
 export const restoreAsset = async (req, res) => {
   try {
     const { id } = req.params;
@@ -240,17 +233,14 @@ export const deleteAssetPermanently = async (req, res) => {
       });
     }
 
-    // Delete image from Cloudinary if exists
     if (asset.cloudinary_id) {
       try {
         await cloudinary.uploader.destroy(asset.cloudinary_id);
       } catch (cloudinaryError) {
         console.warn('Cloudinary deletion warning:', cloudinaryError.message);
-        // Continue with deletion even if Cloudinary fails
       }
     }
 
-    // Get asset info before deletion for response
     const assetInfo = {
       brand: asset.brand,
       model: asset.model,

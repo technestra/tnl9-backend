@@ -164,29 +164,30 @@ export const updateSuspect = async (req, res) => {
   }
 };
 
-export const deleteSuspect = async (req, res) => {
-  try {
-    const suspect = await Suspect.findById(req.params.id);
-    if (!suspect) {
-      return res.status(404).json({ message: "Suspect not found" });
-    }
+// export const deleteSuspect = async (req, res) => {
+//   try {
+//     const suspect = await Suspect.findById(req.params.id);
+//     if (!suspect) {
+//       return res.status(404).json({ message: "Suspect not found" });
+//     }
 
-    const isCreator =
-      suspect.createdBy.userId.toString() === req.user.id;
+//     const isCreator =
+//       suspect.createdBy.userId.toString() === req.user.id;
 
-    const isSuperAdmin = req.user.role === "SUPER_ADMIN";
+//     const isSuperAdmin = req.user.role === "SUPER_ADMIN";
 
-    if (!isCreator && !isSuperAdmin) {
-      return res.status(403).json({ message: "No permission" });
-    }
+//     if (!isCreator && !isSuperAdmin) {
+//       return res.status(403).json({ message: "No permission" });
+//     }
 
-    await suspect.deleteOne();
+//     // await suspect.deleteOne();
+//     await suspect.deleteOne();
 
-    res.json({ message: "Suspect deleted successfully" });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
+//     res.json({ message: "Suspect deleted successfully" });
+//   } catch (error) {
+//     res.status(500).json({ message: error.message });
+//   }
+// };
 
 export const toggleSuspectActive = async (req, res) => {
   try {
@@ -443,129 +444,227 @@ export const getFollowupHistory = async (req, res) => {
 export const softDeleteSuspect = async (req, res) => {
   try {
     const suspect = await Suspect.findById(req.params.id);
-
     if (!suspect) {
-      return res.status(404).json({
-        success: false,
-        message: "Suspect not found"
-      });
+      return res.status(404).json({ message: "Suspect not found" });
     }
 
-    if (req.user.role !== "SUPER_ADMIN" &&
-      suspect.createdBy.userId.toString() !== req.user.id) {
-      return res.status(403).json({
-        success: false,
-        message: "No permission to delete this Suspect"
-      });
+    const isCreator =
+      suspect.createdBy.userId.toString() === req.user.id;
+    const isSuperAdmin = req.user.role === "SUPER_ADMIN";
+
+    if (!isCreator && !isSuperAdmin) {
+      return res.status(403).json({ message: "No permission" });
     }
 
-    await suspect.softDelete(req.user.id);
+    if (suspect.isDeleted) {
+      return res.status(400).json({ message: "Suspect already in trash" });
+    }
+
+    suspect.isDeleted = true;
+    suspect.deletedAt = new Date();
+    suspect.deletedBy = req.user.id;
+
+    await suspect.save();
 
     res.json({
       success: true,
       message: "Suspect moved to trash"
     });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message
-    });
+    res.status(500).json({ message: error.message });
   }
 };
 
-export const restoreSuspect = async (req, res) => {
+
+export const getTrashedSuspects = async (req, res) => {
   try {
     if (req.user.role !== "SUPER_ADMIN") {
-      return res.status(403).json({
-        success: false,
-        message: "Only Super Admin can restore Suspect"
-      });
+      return res.status(403).json({ message: "Access denied" });
     }
 
-    const suspect = await Suspect.findById(req.params.id);
+    const suspects = await Suspect.find(
+      { isDeleted: true }
+    ).sort({ deletedAt: -1 });
 
+    res.json({
+      success: true,
+      data: suspects
+    });
+  } catch (error) {
+    console.error("TRASH SUSPECT ERROR:", error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+
+
+
+export const restoreSuspect = async (req, res) => {
+  try {
+    const suspect = await Suspect.findOneDeleted({ _id: req.params.id });
     if (!suspect) {
-      return res.status(404).json({
-        success: false,
-        message: "Suspect not found"
-      });
+      return res.status(404).json({ message: "Suspect not found in trash" });
     }
 
     await suspect.restore();
 
     res.json({
       success: true,
-      message: "Suspect restored successfully",
-      suspect
+      message: "Suspect restored successfully"
     });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message
-    });
+    res.status(500).json({ message: error.message });
   }
 };
 
-export const getTrashSuspect = async (req, res) => {
+export const permanentlyDeleteSuspect = async (req, res) => {
   try {
     if (req.user.role !== "SUPER_ADMIN") {
-      return res.status(403).json({
-        success: false,
-        message: "Access denied"
-      });
+      return res.status(403).json({ message: "Access denied" });
     }
 
-    const Suspects = await Suspect.findDeleted()
-      .populate("deletedBy", "name email")
-      .sort({ deletedAt: -1 });
-
-    res.json({
-      success: true,
-      data: Suspects
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message
-    });
-  }
-};
-
-// Permanent delete
-export const permanentDeleteSuspect = async (req, res) => {
-  try {
-    if (req.user.role !== "SUPER_ADMIN") {
-      return res.status(403).json({
-        success: false,
-        message: "Only Super Admin can permanently delete"
-      });
-    }
-
-    const suspect = await Suspect.findById(req.params.id);
-
+    const suspect = await Suspect.findOneDeleted({ _id: req.params.id });
     if (!suspect) {
-      return res.status(404).json({
-        success: false,
-        message: "Suspect not found"
-      });
+      return res.status(404).json({ message: "Suspect not found in trash" });
     }
 
-    // Remove company from users' Suspects array
-    await User.updateMany(
-      { Suspects: suspect._id },
-      { $pull: { Suspects: suspect._id } }
-    );
-
-    await suspect.deleteOne();
+    await Suspect.deleteOne({ _id: suspect._id });
 
     res.json({
       success: true,
       message: "Suspect permanently deleted"
     });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message
-    });
+    res.status(500).json({ message: error.message });
   }
 };
+
+
+export const emptySuspectTrash = async (req, res) => {
+  try {
+    if (req.user.role !== "SUPER_ADMIN") {
+      return res.status(403).json({ message: "Access denied" });
+    }
+
+    // await Suspect.deleteMany({ isDeleted: true });
+    await Suspect.deleteMany(
+  { isDeleted: true },
+  { withDeleted: true }
+);
+
+
+    res.json({
+      success: true,
+      message: "Suspect trash emptied successfully"
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+
+
+// export const deleteSuspect = async (req, res) => {
+//   try {
+//     const suspect = await Suspect.findById(req.params.id);
+//     if (!suspect) {
+//       return res.status(404).json({ message: "Suspect not found" });
+//     }
+
+//     const isCreator =
+//       suspect.createdBy.userId.toString() === req.user.id;
+
+//     const isSuperAdmin = req.user.role === "SUPER_ADMIN";
+
+//     if (!isCreator && !isSuperAdmin) {
+//       return res.status(403).json({ message: "No permission" });
+//     }
+
+//     await suspect.softDelete(req.user.id);
+
+//     res.json({ message: "Suspect moved to trash successfully" });
+//   } catch (error) {
+//     res.status(500).json({ message: error.message });
+//   }
+// };
+
+
+// export const getDeletedSuspects = async (req, res) => {
+//   try {
+//     const { companyId } = req.params;
+
+//     const suspects = await Suspect.findDeleted({
+//       company: companyId
+//     })
+//       .populate("company", "companyName")
+//       .sort({ deletedAt: -1 });
+
+//     res.json({
+//       success: true,
+//       data: suspects
+//     });
+//   } catch (error) {
+//     res.status(500).json({ message: error.message });
+//   }
+// };
+
+
+// export const restoreSuspect = async (req, res) => {
+//   try {
+//     const suspect = await Suspect.restoreById(req.params.id);
+
+//     if (!suspect) {
+//       return res.status(404).json({ message: "Suspect not found" });
+//     }
+
+//     res.json({
+//       message: "Suspect restored successfully",
+//       suspect
+//     });
+//   } catch (error) {
+//     res.status(500).json({ message: error.message });
+//   }
+// };
+
+
+// export const permanentlyDeleteSuspect = async (req, res) => {
+//   try {
+//     if (req.user.role !== "SUPER_ADMIN") {
+//       return res.status(403).json({ message: "Only Super Admin allowed" });
+//     }
+
+//     const suspect = await Suspect.findOneDeleted({ _id: req.params.id });
+//     if (!suspect) {
+//       return res.status(404).json({ message: "Suspect not found in trash" });
+//     }
+
+//     await suspect.deleteOne(); // REAL DELETE
+
+//     res.json({ message: "Suspect permanently deleted" });
+//   } catch (error) {
+//     res.status(500).json({ message: error.message });
+//   }
+// };
+
+
+// export const emptyCompanySuspectTrash = async (req, res) => {
+//   try {
+//     if (req.user.role !== "SUPER_ADMIN") {
+//       return res.status(403).json({ message: "Only Super Admin allowed" });
+//     }
+
+//     const { companyId } = req.params;
+
+//     const result = await Suspect.deleteMany({
+//       company: companyId,
+//       isDeleted: true
+//     });
+
+//     res.json({
+//       message: "Trash emptied successfully",
+//       deletedCount: result.deletedCount
+//     });
+//   } catch (error) {
+//     res.status(500).json({ message: error.message });
+//   }
+// };

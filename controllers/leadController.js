@@ -368,26 +368,26 @@ export const updateLead = async (req, res) => {
   }
 };
 
-export const deleteLead = async (req, res) => {
-  try {
-    const lead = await Lead.findById(req.params.id);
-    if (!lead) {
-      return res.status(404).json({ message: "Lead not found" });
-    }
-    const userId = req.user?.id?.toString();
-    const leadOwnerId = lead.createdBy?.toString();
+// export const deleteLead = async (req, res) => {
+//   try {
+//     const lead = await Lead.findById(req.params.id);
+//     if (!lead) {
+//       return res.status(404).json({ message: "Lead not found" });
+//     }
+//     const userId = req.user?.id?.toString();
+//     const leadOwnerId = lead.createdBy?.toString();
 
-    if (req.user.role !== "SUPER_ADMIN" && userId !== leadOwnerId) {
-      return res.status(403).json({ message: "No permission" });
-    }
-    await lead.deleteOne();
+//     if (req.user.role !== "SUPER_ADMIN" && userId !== leadOwnerId) {
+//       return res.status(403).json({ message: "No permission" });
+//     }
+//     await lead.deleteOne();
 
-    res.json({ message: "Lead deleted successfully" });
-  } catch (error) {
-    console.error("[DELETE LEAD ERROR]:", error);
-    res.status(500).json({ message: error.message });
-  }
-};
+//     res.json({ message: "Lead deleted successfully" });
+//   } catch (error) {
+//     console.error("[DELETE LEAD ERROR]:", error);
+//     res.status(500).json({ message: error.message });
+//   }
+// };
 
 export const updateLeadStage = async (req, res) => {
   try {
@@ -644,128 +644,107 @@ export const getFollowupHistory = async (req, res) => {
   }
 };
 
+
+
+
 export const softDeleteLead = async (req, res) => {
   try {
     const lead = await Lead.findById(req.params.id);
 
     if (!lead) {
-      return res.status(404).json({
-        success: false,
-        message: "Lead not found"
-      });
+      return res.status(404).json({ message: "Lead not found" });
     }
-    if (req.user.role !== "SUPER_ADMIN" &&
-      lead.createdBy.userId.toString() !== req.user.id) {
-      return res.status(403).json({
-        success: false,
-        message: "No permission to delete this company"
-      });
-    }
+
     await lead.softDelete(req.user.id);
 
     res.json({
       success: true,
       message: "Lead moved to trash"
     });
+
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message
+    res.status(500).json({ message: error.message });
+  }
+};
+export const getTrashedLead = async (req, res) => {
+  try {
+    const leads = await Lead.findDeleted()
+      .sort({ deletedAt: -1 });
+
+    res.json({
+      success: true,
+      data: leads
     });
+
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
 };
 
 export const restoreLead = async (req, res) => {
   try {
-    if (req.user.role !== "SUPER_ADMIN") {
-      return res.status(403).json({
-        success: false,
-        message: "Only Super Admin can restore Lead"
-      });
-    }
-
-    const lead = await Lead.findById(req.params.id);
+    const lead = await Lead.findOneDeleted({
+      _id: req.params.id
+    });
 
     if (!lead) {
-      return res.status(404).json({
-        success: false,
-        message: "Lead not found"
-      });
+      return res.status(404).json({ message: "Lead not found in trash" });
     }
 
     await lead.restore();
 
     res.json({
       success: true,
-      message: "Lead restored successfully",
-      lead
+      message: "Lead restored successfully"
     });
+
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message
-    });
+    res.status(500).json({ message: error.message });
   }
 };
-
-export const getTrashLead = async (req, res) => {
+export const permanentlyDeleteLead = async (req, res) => {
   try {
-    if (req.user.role !== "SUPER_ADMIN") {
-      return res.status(403).json({
-        success: false,
-        message: "Access denied"
-      });
-    }
-
-    const leads = await Lead.findDeleted()
-      .populate("deletedBy", "name email")
-      .sort({ deletedAt: -1 });
-
-    res.json({
-      success: true,
-      data: lead
+    const lead = await Lead.findOneDeleted({
+      _id: req.params.id
     });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message
-    });
-  }
-};
-
-export const permanentDeleteLead = async (req, res) => {
-  try {
-    if (req.user.role !== "SUPER_ADMIN") {
-      return res.status(403).json({
-        success: false,
-        message: "Only Super Admin can permanently delete"
-      });
-    }
-
-    const lead = await Lead.findById(req.params.id);
 
     if (!lead) {
-      return res.status(404).json({
-        success: false,
-        message: "Lead not found"
-      });
+      return res.status(404).json({ message: "Lead not found in trash" });
     }
 
-    await User.updateMany(
-      { leads: lead._id },
-      { $pull: { leads: lead._id } }
-    );
-
-    await lead.deleteOne();
+    await Lead.collection.deleteOne({ _id: lead._id });
 
     res.json({
       success: true,
       message: "Lead permanently deleted"
     });
+
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message
+    res.status(500).json({ message: error.message });
+  }
+};
+
+
+
+export const emptyLeadTrash = async (req, res) => {
+  try {
+    if (req.user.role !== "SUPER_ADMIN") {
+      return res.status(403).json({ message: "Access denied" });
+    }
+
+    // await Suspect.deleteMany({ isDeleted: true });
+    //     await Lead.deleteMany(
+    //   { isDeleted: true },
+    //   { withDeleted: true }
+    // );
+    await Lead.collection.deleteMany({ isDeleted: true });
+
+
+    res.json({
+      success: true,
+      message: "leads trash emptied successfully"
     });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
 };

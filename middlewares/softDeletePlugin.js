@@ -1,69 +1,84 @@
 import mongoose from "mongoose";
 
-const softDeletePlugin = (schema, options = {}) => {
+const softDeletePlugin = (schema) => {
   schema.add({
-    isDeleted: { type: Boolean, default: false },
-    deletedAt: { type: Date },
+    isDeleted: {
+      type: Boolean,
+      default: false,
+      index: true
+    },
+    deletedAt: {
+      type: Date,
+      default: null
+    },
     deletedBy: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User"
+      ref: "User",
+      default: null
     }
   });
 
-  schema.methods.softDelete = async function (deletedBy) {
+  schema.methods.softDelete = async function (userId = null) {
+    if (this.isDeleted) return this;
+
     this.isDeleted = true;
     this.deletedAt = new Date();
-    this.deletedBy = deletedBy;
+    this.deletedBy = userId;
+
     return this.save();
   };
 
   schema.methods.restore = async function () {
+    if (!this.isDeleted) return this;
+
     this.isDeleted = false;
     this.deletedAt = null;
     this.deletedBy = null;
+
     return this.save();
   };
 
   schema.statics.findDeleted = function (conditions = {}) {
-    return this.find({ ...conditions, isDeleted: true });
-  };
-
-  schema.statics.findWithDeleted = function (conditions = {}) {
-    return this.find(conditions);
+    return this.find({ ...conditions, isDeleted: true }).setOptions({
+      withDeleted: true
+    });
   };
 
   schema.statics.findOneDeleted = function (conditions = {}) {
-    return this.findOne({ ...conditions, isDeleted: true });
+    return this.findOne({ ...conditions, isDeleted: true }).setOptions({
+      withDeleted: true
+    });
+  };
+
+  schema.statics.findWithDeleted = function (conditions = {}) {
+    return this.find(conditions).setOptions({
+      withDeleted: true
+    });
   };
 
   schema.statics.findOneWithDeleted = function (conditions = {}) {
-    return this.findOne(conditions);
+    return this.findOne(conditions).setOptions({
+      withDeleted: true
+    });
   };
 
   schema.pre(/^find/, function () {
-    if (this.options && this.options.withDeleted) {
-      return;
-    }
-
-    this.where({ isDeleted: { $ne: true } });
-  });
-  schema.pre(/^findOne/, function () {
-    if (this.options && this.options.withDeleted) return;
+    if (this.getOptions()?.withDeleted) return;
     this.where({ isDeleted: { $ne: true } });
   });
 
-  schema.pre('countDocuments', function () {
-    if (this.options && this.options.withDeleted) return;
+  schema.pre("countDocuments", function () {
+    if (this.getOptions()?.withDeleted) return;
     this.where({ isDeleted: { $ne: true } });
   });
 
-  schema.pre('findOneAndUpdate', function () {
-    if (this.options && this.options.withDeleted) return;
+  schema.pre("findOneAndUpdate", function () {
+    if (this.getOptions()?.withDeleted) return;
     this.where({ isDeleted: { $ne: true } });
   });
 
-  schema.pre('findOneAndDelete', function () {
-    if (this.options && this.options.withDeleted) return;
+  schema.pre("findOneAndDelete", function () {
+    if (this.getOptions()?.withDeleted) return;
     this.where({ isDeleted: { $ne: true } });
   });
 };

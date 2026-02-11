@@ -289,27 +289,27 @@ export const toggleProspectActive = async (req, res) => {
   }
 };
 
-export const deleteProspect = async (req, res) => {
-  try {
-    const prospect = await Prospect.findById(req.params.id);
+// export const deleteProspect = async (req, res) => {
+//   try {
+//     const prospect = await Prospect.findById(req.params.id);
 
-    if (!prospect) {
-      return res.status(404).json({ message: "Prospect not found" });
-    }
+//     if (!prospect) {
+//       return res.status(404).json({ message: "Prospect not found" });
+//     }
 
-    if (prospect.status === "WON") {
-      return res
-        .status(400)
-        .json({ message: "Won prospect cannot be deleted" });
-    }
+//     if (prospect.status === "WON") {
+//       return res
+//         .status(400)
+//         .json({ message: "Won prospect cannot be deleted" });
+//     }
 
-    await prospect.deleteOne();
+//     await prospect.deleteOne();
 
-    res.json({ message: "Prospect deleted successfully" });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-};
+//     res.json({ message: "Prospect deleted successfully" });
+//   } catch (err) {
+//     res.status(500).json({ message: err.message });
+//   }
+// };
 
 export const searchProspects = async (req, res) => {
   try {
@@ -511,129 +511,155 @@ export const getFollowupHistory = async (req, res) => {
   }
 };
 
+// export const softDeleteProspect = async (req, res) => {
+//   try {
+//     const prospect = await Prospect.findById(req.params.id);
+
+//     if (!prospect) {
+//       return res.status(404).json({ message: "Prospect not found" });
+//     }
+
+//     if (req.user.role !== "SUPER_ADMIN") {
+//       return res.status(403).json({ message: "Only Super Admin allowed" });
+//     }
+
+//     await prospect.softDelete({
+//       userId: req.user.id,
+//       role: req.user.role
+//     });
+
+//     res.json({ message: "Prospect moved to trash" });
+//   } catch (err) {
+//     console.error("Soft delete prospect error:", err);
+//     res.status(500).json({ message: err.message });
+//   }
+// };
+
 export const softDeleteProspect = async (req, res) => {
   try {
     const prospect = await Prospect.findById(req.params.id);
-
     if (!prospect) {
-      return res.status(404).json({
-        success: false,
-        message: "Prospect not found"
-      });
-    }
-    if (req.user.role !== "SUPER_ADMIN" &&
-      prospect.createdBy.userId.toString() !== req.user.id) {
-      return res.status(403).json({
-        success: false,
-        message: "No permission to delete this company"
-      });
+      return res.status(404).json({ message: "Suspect not found" });
     }
 
-    await prospect.softDelete(req.user.id);
+    const isCreator =
+      prospect.createdBy.userId.toString() === req.user.id;
+    const isSuperAdmin = req.user.role === "SUPER_ADMIN";
+
+    if (!isCreator && !isSuperAdmin) {
+      return res.status(403).json({ message: "No permission" });
+    }
+
+    if (prospect.isDeleted) {
+      return res.status(400).json({ message: "Suspect already in trash" });
+    }
+
+    prospect.isDeleted = true;
+    prospect.deletedAt = new Date();
+    prospect.deletedBy = req.user.id;
+
+    await prospect.save();
 
     res.json({
       success: true,
-      message: "Prospect moved to trash"
+      message: "Suspect moved to trash"
     });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message
-    });
+    res.status(500).json({ message: error.message });
   }
 };
 
-export const restoreProspect = async (req, res) => {
+export const getTrashProspects = async (req, res) => {
   try {
     if (req.user.role !== "SUPER_ADMIN") {
-      return res.status(403).json({
-        success: false,
-        message: "Only Super Admin can restore Prospects"
-      });
+      return res.status(403).json({ message: "Only Super Admin allowed" });
     }
 
-    const prospect = await Prospect.findById(req.params.id);
+    const prospects = await Prospect.findDeleted()
+      .sort({ deletedAt: -1 });
 
+    res.json(prospects);
+  } catch (err) {
+    console.error("Get trash prospects error:", err);
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// export const restoreProspect = async (req, res) => {
+//   try {
+//     if (req.user.role !== "SUPER_ADMIN") {
+//       return res.status(403).json({ message: "Only Super Admin allowed" });
+//     }
+
+//     const prospect = await Prospect.restore({ _id: req.params.id });
+
+//     if (!prospect) {
+//       return res.status(404).json({ message: "Prospect not found in trash" });
+//     }
+
+//     res.json({ message: "Prospect restored successfully" });
+//   } catch (err) {
+//     console.error("Restore prospect error:", err);
+//     res.status(500).json({ message: err.message });
+//   }
+// };
+export const restoreProspect = async (req, res) => {
+  try {
+    const prospect = await Prospect.findOneDeleted({ _id: req.params.id });
     if (!prospect) {
-      return res.status(404).json({
-        success: false,
-        message: "Prospect not found"
-      });
+      return res.status(404).json({ message: "Suspect not found in trash" });
     }
 
     await prospect.restore();
 
     res.json({
       success: true,
-      message: "Prospect restored successfully",
-      prospect
+      message: "prospect restored successfully"
     });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message
-    });
+    res.status(500).json({ message: error.message });
   }
 };
 
-export const getTrashProspect = async (req, res) => {
-  try {
-    if (req.user.role !== "SUPER_ADMIN") {
-      return res.status(403).json({
-        success: false,
-        message: "Access denied"
-      });
-    }
 
-    const prospects = await Prospect.findDeleted()
-      .populate("deletedBy", "name email")
-      .sort({ deletedAt: -1 });
-
-    res.json({
-      success: true,
-      data: prospect
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message
-    });
-  }
-};
 
 export const permanentDeleteProspect = async (req, res) => {
   try {
     if (req.user.role !== "SUPER_ADMIN") {
-      return res.status(403).json({
-        success: false,
-        message: "Only Super Admin can permanently delete"
-      });
+      return res.status(403).json({ message: "Only Super Admin allowed" });
     }
 
-    const prospect = await Prospect.findById(req.params.id);
+    const prospect = await Prospect.findOneDeleted({ _id: req.params.id });
 
     if (!prospect) {
-      return res.status(404).json({
-        success: false,
-        message: "Prospect not found"
-      });
+      return res.status(404).json({ message: "Prospect not found in trash" });
     }
 
-    await User.updateMany(
-      { prospects: prospect._id },
-      { $pull: { prospects: prospect._id } }
-    );
+    await prospect.deleteOne({ force: true });
 
-    await prospect.deleteOne();
-
-    res.json({
-      success: true,
-      message: "Prospect permanently deleted"
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message
-    });
+    res.json({ message: "Prospect permanently deleted" });
+  } catch (err) {
+    console.error("Permanent delete prospect error:", err);
+    res.status(500).json({ message: err.message });
   }
 };
+
+
+export const emptyProspectTrash = async (req, res) => {
+  try {
+    if (req.user.role !== "SUPER_ADMIN") {
+      return res.status(403).json({ message: "Only Super Admin allowed" });
+    }
+
+    await Prospect.deleteMany(
+      { isDeleted: true },
+      { force: true }
+    );
+
+    res.json({ message: "Prospect trash emptied" });
+  } catch (err) {
+    console.error("Empty prospect trash error:", err);
+    res.status(500).json({ message: err.message });
+  }
+};
+
