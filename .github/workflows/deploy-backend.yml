@@ -53,9 +53,4 @@ jobs:
             cd /home/ec2-user/tnl9/tnl9-backend
             npm ci
             pm2 list
-            pm2 start server.js --name tnl9-backend -f
-# <<<<<<< HEAD
-#           EOF
-# =======
-#           EOF
-# >>>>>>> cbd6eaf210af82526bd6001cbc91a27a8aaa713a
+            pm2 startOrReload server.js --name tnl9-backend
