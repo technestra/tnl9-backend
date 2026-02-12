@@ -18,6 +18,8 @@ import contactPersonRoutes from "./routes/contactPersonRoutes.js";
 import importRoutes from "./routes/importRoutes.js";
 import moduleRoleRoutes from "./routes/moduleRoleRoutes.js";
 import assetRoutes from "./routes/assetRoutes.js"
+import onboardingRoutes from "./routes/onboardingRoutes.js";
+import notificationRoutes from "./routes/notificationRoutes.js";
 import errorHandler from "./middlewares/errorHandler.js";
 import notFound from "./middlewares/notFound.js";
 
@@ -59,8 +61,10 @@ app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/employee-documents", employeeDocumentRoutes);
 app.use("/api/reports", reportRoutes);
 app.use("/api/contacts", contactPersonRoutes);
-app.use("/api/assets", assetRoutes)
+app.use("/api/assets", assetRoutes);
+app.use("/api/onboarding", onboardingRoutes);
 app.use("/api/import", importRoutes);
+app.use("/api/notifications", notificationRoutes);
 app.use("/api/module-roles", moduleRoleRoutes);
 
 app.use(notFound);
