@@ -29,15 +29,15 @@ router.route("/stats")
 
 router.route("/:id")
   .get(protect, getAssetById)
-  .put(protect, allowRoles("admin", "superadmin"), updateAsset)
-  .delete(protect, allowRoles("admin", "superadmin"), trashAsset);   // ← changed: now soft delete
+  .put(protect, allowRoles("SUPER_ADMIN"), updateAsset)
+  .delete(protect, allowRoles("SUPER_ADMIN"), trashAsset);   // ← changed: now soft delete
 
 // New trash management routes - Admin only
-router.patch("/:id/restore", protect, allowRoles("admin", "superadmin"), restoreAsset);
-router.delete("/:id/permanent", protect, allowRoles("admin", "superadmin"), deleteAssetPermanently);
+router.patch("/:id/restore", protect, allowRoles("SUPER_ADMIN"), restoreAsset);
+router.delete("/:id/permanent", protect, allowRoles("SUPER_ADMIN"), deleteAssetPermanently);
 
 // Asset management routes - Admin only
-router.post("/:id/assign", protect, allowRoles("admin", "superadmin"), assignAsset);
-router.post("/:id/return", protect, allowRoles("admin", "superadmin"), returnAsset);
+router.post("/:id/assign", protect, allowRoles("SUPER_ADMIN"), assignAsset);
+router.post("/:id/return", protect, allowRoles("SUPER_ADMIN"), returnAsset);
 
 export default router;
