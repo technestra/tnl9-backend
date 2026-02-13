@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import softDeletePlugin from "../middlewares/softDeletePlugin.js";
+import softDeletePlugin from "../../middlewares/softDeletePlugin.js";
 
 const vendorCompanySchema = new mongoose.Schema(
   {
