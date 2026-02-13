@@ -23,6 +23,7 @@ import { checkOwnership } from "../middlewares/ownershipMiddleware.js";
 const router = express.Router();
 
 router.post("/", protect, createLead);
+router.get("/search", protect, searchLeads);
 router.get("/", protect, getLeads);
 router.get("/:id", protect, getLeadById);
 router.put("/:id", protect, updateLead);
@@ -30,7 +31,6 @@ router.put("/:id", protect, updateLead);
 router.put("/:id/stage", protect, updateLeadStage);
 router.put("/:id/followup", protect, updateFollowup);
 router.get("/:id/followup-history", protect, getFollowupHistory);
-router.get("/search", protect, searchLeads);
 router.put("/:id/toggle-active", protect, toggleLeadActive)
 router.delete(
   "/:id",
