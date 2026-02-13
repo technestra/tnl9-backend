@@ -20,6 +20,10 @@ import moduleRoleRoutes from "./routes/moduleRoleRoutes.js";
 import assetRoutes from "./routes/assetRoutes.js"
 import onboardingRoutes from "./routes/onboardingRoutes.js";
 import notificationRoutes from "./routes/notificationRoutes.js";
+
+import vendoreRoutes from "./src/vendore/vendoreRoutes.js";
+
+// error 
 import errorHandler from "./middlewares/errorHandler.js";
 import notFound from "./middlewares/notFound.js";
 
@@ -64,6 +68,9 @@ app.use("/api/contacts", contactPersonRoutes);
 app.use("/api/assets", assetRoutes);
 app.use("/api/onboarding", onboardingRoutes);
 app.use("/api/import", importRoutes);
+
+app.use("/api/vendor", vendoreRoutes);
+
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/module-roles", moduleRoleRoutes);
 
